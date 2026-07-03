@@ -1,6 +1,6 @@
 "use client";
 
-import { useClerk } from "@clerk/nextjs";
+import { UserButton, useClerk } from "@clerk/nextjs";
 import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import {
   Bell,
@@ -169,11 +169,28 @@ function Sidebar({
         })}
       </nav>
 
-      <div className="absolute inset-x-5 bottom-6 rounded-2xl border border-[#0F5A24]/8 bg-[#FFF8E6] p-4">
-        <p className="text-sm font-extrabold text-[#0F5A24]">Route snapshot</p>
-        <p className="mt-1 text-xs font-semibold leading-5 text-[#405244]/68">
-          8 jobs scheduled across Ashburn, Leesburg, and Sterling today.
-        </p>
+      <div className="absolute inset-x-5 bottom-6 grid gap-3">
+        <div className="rounded-2xl border border-[#0F5A24]/8 bg-[#FFF8E6] p-4">
+          <p className="text-sm font-extrabold text-[#0F5A24]">Route snapshot</p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-[#405244]/68">
+            8 jobs scheduled across Ashburn, Leesburg, and Sterling today.
+          </p>
+        </div>
+        <div className="flex items-center justify-between rounded-2xl border border-[#0F5A24]/8 bg-white px-4 py-3 shadow-[0_14px_38px_rgba(15,90,36,0.08)]">
+          <div>
+            <p className="text-sm font-extrabold text-[#0F5A24]">Admin profile</p>
+            <p className="mt-0.5 text-xs font-bold text-[#405244]/52">
+              Clerk settings
+            </p>
+          </div>
+          <UserButton
+            appearance={{
+              elements: {
+                userButtonAvatarBox: "size-10",
+              },
+            }}
+          />
+        </div>
       </div>
     </aside>
   );
@@ -195,9 +212,13 @@ function MobileNav({
           <Image src="/logo.png" alt="Dog Poop People" width={44} height={42} className="h-10 w-auto" />
           <span className="font-heading text-base font-extrabold text-[#0F5A24]">Admin Portal</span>
         </div>
-        <span className="rounded-full bg-[#E8F7DF] px-3 py-1.5 text-xs font-extrabold text-[#0F5A24] ring-1 ring-[#0F5A24]/8">
-          Mock CRM
-        </span>
+        <UserButton
+          appearance={{
+            elements: {
+              userButtonAvatarBox: "size-10",
+            },
+          }}
+        />
       </div>
       <div className="relative -mx-1 mt-3">
         <div className="no-scrollbar flex gap-2 overflow-x-auto px-1 pb-1">
