@@ -17,11 +17,11 @@ function hasAdminRole(metadata: unknown) {
   );
 }
 
-export async function requireAdminUser() {
+export async function requireAdminUser(redirectTo = "/admin/dashboard") {
   const { userId } = await auth();
 
   if (!userId) {
-    redirect("/admin/login?redirect_url=%2Fadmin%2Fdashboard");
+    redirect(`/admin/login?redirect_url=${encodeURIComponent(redirectTo)}`);
   }
 
   const user = await currentUser();
