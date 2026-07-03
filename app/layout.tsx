@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -26,12 +27,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${plusJakartaSans.variable} ${manrope.variable} h-full scroll-smooth antialiased`}
-      data-scroll-behavior="smooth"
+    <ClerkProvider
+      signInUrl="/admin/login"
+      signUpUrl="/admin/login"
+      afterSignOutUrl="/admin/login"
+      signInFallbackRedirectUrl="/admin/dashboard"
+      signUpFallbackRedirectUrl="/admin/dashboard"
     >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+      <html
+        lang="en"
+        className={`${plusJakartaSans.variable} ${manrope.variable} h-full scroll-smooth antialiased`}
+        data-scroll-behavior="smooth"
+      >
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

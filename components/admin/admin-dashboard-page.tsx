@@ -1,5 +1,6 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
 import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import {
   Bell,
@@ -15,7 +16,6 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -1134,7 +1134,7 @@ function MockNotice({
 }
 
 export function AdminDashboardPage() {
-  const router = useRouter();
+  const { signOut } = useClerk();
   const [activeSection, setActiveSection] = useState<AdminSection>("Dashboard");
   const [leadModal, setLeadModal] = useState<LeadModalState>(null);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -1143,8 +1143,8 @@ export function AdminDashboardPage() {
   const [leadStatusFilter, setLeadStatusFilter] = useState<LeadStatus | "All">("All");
   const [leadServiceFilter, setLeadServiceFilter] = useState("All");
 
-  const handleLogout = () => {
-    router.push("/admin/login");
+  const handleLogout = async () => {
+    await signOut({ redirectUrl: "/admin/login" });
   };
 
   const showLeads = (status: LeadStatus | "All" = "All") => {
