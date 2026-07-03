@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Mail, MessageCircle, Phone } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import {
@@ -41,6 +42,9 @@ export default async function Page({ params }: { params: Params }) {
   if (!lead) {
     notFound();
   }
+
+  const digits = lead.phone.replace(/\D/g, "");
+  const whatsappNumber = digits.length === 10 ? `1${digits}` : digits;
 
   return (
     <AdminShell
@@ -87,6 +91,39 @@ export default async function Page({ params }: { params: Params }) {
         <div className="grid gap-6">
           <AdminCard>
             <h2 className="font-heading text-xl font-extrabold text-[#0F5A24]">
+              Contact Customer
+            </h2>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a
+                href={`mailto:${lead.email}?subject=Dog Poop People Service Request`}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#0F5A24]/15 bg-white px-5 text-sm font-extrabold text-[#0F5A24] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF8E6]"
+              >
+                <Mail className="size-4" />
+                Email
+              </a>
+              <a
+                href={`tel:${lead.phone}`}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#0F5A24]/15 bg-white px-5 text-sm font-extrabold text-[#0F5A24] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF8E6]"
+              >
+                <Phone className="size-4" />
+                Call
+              </a>
+              {whatsappNumber ? (
+                <a
+                  href={`https://wa.me/${whatsappNumber}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#0F5A24]/15 bg-white px-5 text-sm font-extrabold text-[#0F5A24] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#FFF8E6]"
+                >
+                  <MessageCircle className="size-4" />
+                  WhatsApp
+                </a>
+              ) : null}
+            </div>
+          </AdminCard>
+
+          <AdminCard>
+            <h2 className="font-heading text-xl font-extrabold text-[#0F5A24]">
               Update Lead
             </h2>
             <div className="mt-5">
@@ -118,4 +155,3 @@ export default async function Page({ params }: { params: Params }) {
     </AdminShell>
   );
 }
-

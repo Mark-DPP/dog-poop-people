@@ -12,7 +12,7 @@ export async function getDashboardData() {
     contactedLeads,
     scheduledJobs,
     completedJobs,
-    weeklyCustomers,
+    customers,
     contactMessages,
     recentLeads,
     recentActivity,
@@ -22,12 +22,7 @@ export async function getDashboardData() {
     prisma.lead.count({ where: { status: "CONTACTED" } }),
     prisma.lead.count({ where: { status: "SCHEDULED" } }),
     prisma.lead.count({ where: { status: "COMPLETED" } }),
-    prisma.lead.count({
-      where: {
-        serviceType: "WEEKLY",
-        status: { in: ["SCHEDULED", "COMPLETED"] },
-      },
-    }),
+    prisma.lead.count({ where: { status: { in: ["SCHEDULED", "COMPLETED"] } } }),
     prisma.contactMessage.count(),
     prisma.lead.findMany({
       orderBy: { createdAt: "desc" },
@@ -49,7 +44,7 @@ export async function getDashboardData() {
       contactedLeads,
       scheduledJobs,
       completedJobs,
-      weeklyCustomers,
+      weeklyCustomers: customers,
       contactMessages,
       conversionRate,
     },
@@ -131,10 +126,9 @@ export async function getContactMessages({
   };
 }
 
-export async function getWeeklyCustomers() {
+export async function getCustomers() {
   return prisma.lead.findMany({
     where: {
-      serviceType: "WEEKLY",
       status: { in: ["SCHEDULED", "COMPLETED"] },
     },
     orderBy: { updatedAt: "desc" },
@@ -173,4 +167,3 @@ export async function getReportsData() {
     notQualifiedLeads,
   };
 }
-

@@ -3,7 +3,9 @@
 import { prisma } from "@/lib/db/prisma";
 import {
   assertEmailNotificationsConfigured,
+  sendContactAutoReplyEmail,
   sendContactNotificationEmail,
+  sendLeadReceivedCustomerEmail,
   sendLeadNotificationEmail,
 } from "@/lib/email/notifications";
 import {
@@ -125,6 +127,10 @@ export async function submitLeadForm(
       lead,
       submittedAt: createdLead.createdAt ?? submittedAt,
     });
+    await sendLeadReceivedCustomerEmail({
+      lead,
+      submittedAt: createdLead.createdAt ?? submittedAt,
+    });
 
     return {
       ok: true,
@@ -194,6 +200,10 @@ export async function submitContactForm(
     });
 
     await sendContactNotificationEmail({
+      message: contactMessage,
+      submittedAt: createdContactMessage.createdAt ?? submittedAt,
+    });
+    await sendContactAutoReplyEmail({
       message: contactMessage,
       submittedAt: createdContactMessage.createdAt ?? submittedAt,
     });

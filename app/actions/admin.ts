@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireAdminUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/db/prisma";
+import { sendLeadStatusCustomerEmail } from "@/lib/email/notifications";
 
 const leadStatusSchema = z.enum([
   "NEW_LEAD",
@@ -66,6 +67,15 @@ export async function updateLeadAction(
     },
   });
 
+  let emailMessage = " Customer email sent.";
+
+  try {
+    await sendLeadStatusCustomerEmail({ lead });
+  } catch {
+    emailMessage =
+      " Customer email could not be sent. Check Resend environment variables and logs.";
+  }
+
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/leads");
   revalidatePath(`/admin/leads/${id}`);
@@ -74,7 +84,7 @@ export async function updateLeadAction(
 
   return {
     ok: true,
-    message: "Lead updated successfully.",
+    message: `Lead updated successfully.${emailMessage}`,
   };
 }
 

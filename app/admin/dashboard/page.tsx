@@ -43,7 +43,7 @@ function statCards(stats: Awaited<ReturnType<typeof getDashboardData>>["stats"])
     { label: "Contacted Leads", value: stats.contactedLeads, icon: statIcons.contactedLeads },
     { label: "Scheduled Jobs", value: stats.scheduledJobs, icon: statIcons.scheduledJobs },
     { label: "Completed Jobs", value: stats.completedJobs, icon: statIcons.completedJobs },
-    { label: "Weekly Customers", value: stats.weeklyCustomers, icon: statIcons.weeklyCustomers },
+    { label: "Customers", value: stats.weeklyCustomers, icon: statIcons.weeklyCustomers },
     { label: "Contact Messages", value: stats.contactMessages, icon: statIcons.contactMessages },
     {
       label: "Conversion Rate",
@@ -161,4 +161,3 @@ export default async function Page() {
     </AdminShell>
   );
 }
-
