@@ -80,6 +80,7 @@ export function CustomerQualificationPage() {
   const [formStartedAt, setFormStartedAt] = useState(getTimestamp);
   const [submitMessage, setSubmitMessage] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [finalStepEnteredAt, setFinalStepEnteredAt] = useState(0);
   const {
     register,
     handleSubmit,
@@ -114,11 +115,27 @@ export function CustomerQualificationPage() {
     }
 
     if (isValid) {
-      setActiveStep((step) => Math.min(step + 1, steps.length - 1));
+      setActiveStep((step) => {
+        const nextStepIndex = Math.min(step + 1, steps.length - 1);
+
+        if (nextStepIndex === steps.length - 1) {
+          setFinalStepEnteredAt(getTimestamp());
+        }
+
+        return nextStepIndex;
+      });
     }
   };
 
   const onSubmit = async (data: ServiceRequestFormValues) => {
+    if (activeStep !== steps.length - 1) {
+      return;
+    }
+
+    if (getTimestamp() - finalStepEnteredAt < 600) {
+      return;
+    }
+
     setSubmitError("");
     setSubmitMessage("");
 
@@ -315,7 +332,18 @@ export function CustomerQualificationPage() {
                 </div>
               </motion.div>
             ) : (
-              <form className="grid gap-7" onSubmit={handleSubmit(onSubmit)}>
+              <form
+                className="grid gap-7"
+                onSubmit={handleSubmit(onSubmit)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    event.target instanceof HTMLInputElement
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
+              >
                 <label className="sr-only" aria-hidden="true">
                   Website
                   <input
@@ -474,12 +502,17 @@ export function CustomerQualificationPage() {
                     Back
                   </Button>
                   {activeStep < steps.length - 1 ? (
-                    <Button type="button" onClick={nextStep} disabled={isSubmitting}>
+                    <Button
+                      key="next-step"
+                      type="button"
+                      onClick={nextStep}
+                      disabled={isSubmitting}
+                    >
                       Next Step
                       <ArrowRight className="size-4" />
                     </Button>
                   ) : (
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button key="submit-request" type="submit" disabled={isSubmitting}>
                       <ShieldCheck className="size-4" />
                       {isSubmitting ? "Submitting..." : "Submit Service Request"}
                     </Button>
