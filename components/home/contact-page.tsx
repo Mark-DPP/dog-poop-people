@@ -70,8 +70,8 @@ export function ContactPage() {
               {[
                 "Questions, notes, and general messages",
                 "Phone is optional on the contact form",
-                "No emails are sent yet",
-                "Form data logs to the browser console",
+                "Messages are sent securely",
+                "We’ll reply as soon as possible",
               ].map((item) => (
                 <p key={item} className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#65C22E]" />

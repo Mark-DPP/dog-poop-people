@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model admin_users {
+  id                BigInt   @id @default(autoincrement())
+  clerk_user_id     String   @unique
+  email             String?
+  full_name         String?
+  image_url         String?
+  role              String   @default("admin")
+  last_signed_in_at DateTime @default(now()) @db.Timestamptz(6)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+}
+
+enum LeadStatus {
+  NEW_LEAD
+  CONTACTED
+  SCHEDULED
+  COMPLETED
+  CLOSED
+  NOT_QUALIFIED
+}
+
+enum ContactMessageStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum ServiceType {
+  ONE_TIME
+  WEEKLY
+}
+
+enum YardSize {
+  UNDER_QUARTER
+  EXACT_QUARTER
+  OVER_QUARTER
+}
+
+model Lead {
+  id                String      @id @default(cuid())
+  fullName          String      @db.VarChar(160)
+  email             String      @db.VarChar(255)
+  phone             String      @db.VarChar(40)
+  propertyAddress   String      @db.VarChar(255)
+  serviceType       ServiceType
+  numberOfDogs      Int
+  yardSize          YardSize
+  isInLoudounCounty Boolean
+  accessNotes       String?     @db.Text
+  message           String?     @db.Text
+  status            LeadStatus  @default(NEW_LEAD)
+  adminNotes        String?     @db.Text
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model ContactMessage {
+  id        String               @id @default(cuid())
+  fullName  String               @db.VarChar(160)
+  email     String               @db.VarChar(255)
+  phone     String?              @db.VarChar(40)
+  message   String               @db.Text
+  status    ContactMessageStatus @default(UNREAD)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model AdminActivity {
+  id          String   @id @default(cuid())
+  type        String   @db.VarChar(80)
+  title       String   @db.VarChar(160)
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([createdAt])
+}

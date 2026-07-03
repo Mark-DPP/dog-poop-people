@@ -21,6 +21,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useForm, useWatch, type FieldPath } from "react-hook-form";
 
+import { submitLeadForm } from "@/app/actions/forms";
 import { SiteFooter } from "@/components/home/site-footer";
 import { SiteHeader } from "@/components/home/site-header";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,10 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { serviceRequestSchema, type ServiceRequestFormValues } from "@/lib/forms";
+
+function getTimestamp() {
+  return new Date().getTime();
+}
 
 const steps = [
   {
@@ -72,6 +77,9 @@ function SelectWrap({ children }: { children: ReactNode }) {
 export function CustomerQualificationPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [formStartedAt, setFormStartedAt] = useState(getTimestamp);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const {
     register,
     handleSubmit,
@@ -92,6 +100,7 @@ export function CustomerQualificationPage() {
       loudounCounty: false,
       accessNotes: "",
       message: "",
+      website: "",
     },
     mode: "onTouched",
   });
@@ -109,9 +118,38 @@ export function CustomerQualificationPage() {
     }
   };
 
-  const onSubmit = (data: ServiceRequestFormValues) => {
-    console.log("Dog Poop People service request", data);
+  const onSubmit = async (data: ServiceRequestFormValues) => {
+    setSubmitError("");
+    setSubmitMessage("");
+
+    const result = await submitLeadForm({
+      ...data,
+      formStartedAt,
+    });
+
+    if (!result.ok) {
+      setSubmitError(result.message);
+      return;
+    }
+
+    const nextFormStartedAt = getTimestamp();
+    setSubmitMessage(result.message);
     setSubmitted(true);
+    setActiveStep(0);
+    setFormStartedAt(nextFormStartedAt);
+    reset({
+      fullName: "",
+      email: "",
+      phone: "",
+      address: "",
+      serviceType: undefined,
+      dogs: undefined,
+      yardSize: undefined,
+      loudounCounty: false,
+      accessNotes: "",
+      message: "",
+      website: "",
+    });
   };
 
   return (
@@ -241,14 +279,30 @@ export function CustomerQualificationPage() {
                   Thank you. Your request has been received.
                 </h3>
                 <p className="mt-3 leading-7 text-[#405244]">
-                  We will review your details and contact you soon.
+                  {submitMessage || "We will review your details and contact you soon."}
                 </p>
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      reset();
+                      const nextFormStartedAt = getTimestamp();
+                      reset({
+                        fullName: "",
+                        email: "",
+                        phone: "",
+                        address: "",
+                        serviceType: undefined,
+                        dogs: undefined,
+                        yardSize: undefined,
+                        loudounCounty: false,
+                        accessNotes: "",
+                        message: "",
+                        website: "",
+                      });
+                      setFormStartedAt(nextFormStartedAt);
+                      setSubmitError("");
+                      setSubmitMessage("");
                       setActiveStep(0);
                       setSubmitted(false);
                     }}
@@ -262,6 +316,14 @@ export function CustomerQualificationPage() {
               </motion.div>
             ) : (
               <form className="grid gap-7" onSubmit={handleSubmit(onSubmit)}>
+                <label className="sr-only" aria-hidden="true">
+                  Website
+                  <input
+                    tabIndex={-1}
+                    autoComplete="off"
+                    {...register("website")}
+                  />
+                </label>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-[#E8F7DF] text-[#0F5A24]">
                     {activeStep === 0 ? <UserRound className="size-5" /> : null}
@@ -397,24 +459,29 @@ export function CustomerQualificationPage() {
                 ) : null}
 
                 <div className="flex flex-col justify-between gap-3 border-t border-[#0F5A24]/10 pt-6 sm:flex-row">
+                  {submitError ? (
+                    <p className="rounded-2xl border border-[#B42318]/20 bg-[#FEF3F2] px-4 py-3 text-sm font-bold leading-6 text-[#B42318] sm:order-2 sm:flex-1">
+                      {submitError}
+                    </p>
+                  ) : null}
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={activeStep === 0}
+                    disabled={activeStep === 0 || isSubmitting}
                     onClick={() => setActiveStep((step) => Math.max(step - 1, 0))}
                   >
                     <ArrowLeft className="size-4" />
                     Back
                   </Button>
                   {activeStep < steps.length - 1 ? (
-                    <Button type="button" onClick={nextStep}>
+                    <Button type="button" onClick={nextStep} disabled={isSubmitting}>
                       Next Step
                       <ArrowRight className="size-4" />
                     </Button>
                   ) : (
                     <Button type="submit" disabled={isSubmitting}>
                       <ShieldCheck className="size-4" />
-                      Submit Service Request
+                      {isSubmitting ? "Submitting..." : "Submit Service Request"}
                     </Button>
                   )}
                 </div>

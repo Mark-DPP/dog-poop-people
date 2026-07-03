@@ -6,10 +6,15 @@ import { CheckCircle2, Mail, MapPinned, MessageSquareText, Phone, Send } from "l
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { submitContactForm } from "@/app/actions/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { contactSchema, type ContactFormValues } from "@/lib/forms";
+
+function getTimestamp() {
+  return new Date().getTime();
+}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) {
@@ -21,6 +26,9 @@ function FieldError({ message }: { message?: string }) {
 
 export function ContactFormSection() {
   const [submitted, setSubmitted] = useState(false);
+  const [formStartedAt, setFormStartedAt] = useState(getTimestamp);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const {
     register,
     handleSubmit,
@@ -33,12 +41,35 @@ export function ContactFormSection() {
       email: "",
       phone: "",
       message: "",
+      website: "",
     },
   });
 
-  const onSubmit = (data: ContactFormValues) => {
-    console.log("Dog Poop People contact message", data);
+  const onSubmit = async (data: ContactFormValues) => {
+    setSubmitError("");
+    setSubmitMessage("");
+
+    const result = await submitContactForm({
+      ...data,
+      formStartedAt,
+    });
+
+    if (!result.ok) {
+      setSubmitError(result.message);
+      return;
+    }
+
+    const nextFormStartedAt = getTimestamp();
+    setSubmitMessage(result.message);
     setSubmitted(true);
+    setFormStartedAt(nextFormStartedAt);
+    reset({
+      fullName: "",
+      email: "",
+      phone: "",
+      message: "",
+      website: "",
+    });
   };
 
   return (
@@ -112,14 +143,24 @@ export function ContactFormSection() {
                 Thanks for reaching out.
               </h3>
               <p className="mt-3 leading-7 text-[#405244]">
-                We’ll respond as soon as possible.
+                {submitMessage || "We’ll respond as soon as possible."}
               </p>
               <Button
                 type="button"
                 variant="outline"
                 className="mt-6"
                 onClick={() => {
-                  reset();
+                  const nextFormStartedAt = getTimestamp();
+                  reset({
+                    fullName: "",
+                    email: "",
+                    phone: "",
+                    message: "",
+                    website: "",
+                  });
+                  setFormStartedAt(nextFormStartedAt);
+                  setSubmitError("");
+                  setSubmitMessage("");
                   setSubmitted(false);
                 }}
               >
@@ -128,6 +169,14 @@ export function ContactFormSection() {
             </motion.div>
           ) : (
             <form className="grid gap-5" onSubmit={handleSubmit(onSubmit)}>
+              <label className="sr-only" aria-hidden="true">
+                Website
+                <input
+                  tabIndex={-1}
+                  autoComplete="off"
+                  {...register("website")}
+                />
+              </label>
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="grid gap-2">
                   <span className="text-sm font-extrabold text-[#12321C]">Full Name</span>
@@ -143,15 +192,21 @@ export function ContactFormSection() {
               <label className="grid gap-2">
                 <span className="text-sm font-extrabold text-[#12321C]">Phone Number</span>
                 <Input type="tel" {...register("phone")} autoComplete="tel" />
+                <FieldError message={errors.phone?.message} />
               </label>
               <label className="grid gap-2">
                 <span className="text-sm font-extrabold text-[#12321C]">Message</span>
                 <Textarea {...register("message")} />
                 <FieldError message={errors.message?.message} />
               </label>
+              {submitError ? (
+                <p className="rounded-2xl border border-[#B42318]/20 bg-[#FEF3F2] px-4 py-3 text-sm font-bold leading-6 text-[#B42318]">
+                  {submitError}
+                </p>
+              ) : null}
               <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting}>
                 <Send className="size-4" />
-                Send Message
+                {isSubmitting ? "Sending..." : "Send Message"}
               </Button>
             </form>
           )}
