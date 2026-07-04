@@ -29,6 +29,10 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { serviceRequestSchema, type ServiceRequestFormValues } from "@/lib/forms";
+import {
+  formatCurrency,
+  type BusinessSettingsValues,
+} from "@/lib/settings/pricing";
 
 function getTimestamp() {
   return new Date().getTime();
@@ -74,7 +78,11 @@ function SelectWrap({ children }: { children: ReactNode }) {
   );
 }
 
-export function CustomerQualificationPage() {
+export function CustomerQualificationPage({
+  settings,
+}: {
+  settings: BusinessSettingsValues;
+}) {
   const [activeStep, setActiveStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [formStartedAt, setFormStartedAt] = useState(getTimestamp);
@@ -197,8 +205,9 @@ export function CustomerQualificationPage() {
               Start Your Service Request.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/82">
-              A simple four-step signup request for Loudoun County homes,
-              weekly cleanup, one-time service, and dog areas up to 1/4 acre.
+              A simple four-step signup request for {settings.serviceArea} homes,
+              weekly cleanup, one-time service, and dog areas up to{" "}
+              {settings.maxYardSize}.
             </p>
           </motion.div>
 
@@ -210,10 +219,10 @@ export function CustomerQualificationPage() {
           >
             <div className="grid gap-4 text-sm font-semibold leading-6 text-white/78">
               {[
-                "Loudoun County, VA only",
+                `${settings.serviceArea} only`,
                 "One-time or weekly service only",
-                "Dog areas up to 1/4 acre",
-                "+$5 per additional dog after the first",
+                `Dog areas up to ${settings.maxYardSize}`,
+                `+${formatCurrency(settings.extraDogCents)} per additional dog after the first`,
               ].map((item) => (
                 <p key={item} className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#65C22E]" />
@@ -408,7 +417,7 @@ export function CustomerQualificationPage() {
                       />
                       <span>
                         <span className="block text-sm font-extrabold text-[#12321C]">
-                          I confirm this property is located in Loudoun County, VA.
+                          I confirm this property is located in {settings.serviceArea}.
                         </span>
                         <FieldError message={errors.loudounCounty?.message} />
                       </span>
@@ -423,8 +432,12 @@ export function CustomerQualificationPage() {
                       <SelectWrap>
                         <Select {...register("serviceType")} defaultValue="">
                           <option value="" disabled>Choose service</option>
-                          <option value="one-time">One Time Service $100</option>
-                          <option value="weekly">Weekly Service $25 per visit</option>
+                          <option value="one-time">
+                            One Time Service {formatCurrency(settings.firstVisitCents)}
+                          </option>
+                          <option value="weekly">
+                            Weekly Service {formatCurrency(settings.weeklyServiceCents)} per visit
+                          </option>
                         </Select>
                       </SelectWrap>
                       <FieldError message={errors.serviceType?.message} />
@@ -442,7 +455,8 @@ export function CustomerQualificationPage() {
                         </Select>
                       </SelectWrap>
                       <p className="text-xs font-semibold leading-5 text-[#405244]/72">
-                        First dog included. Each additional dog is +$5 per visit.
+                        First dog included. Each additional dog is +
+                        {formatCurrency(settings.extraDogCents)} per visit.
                       </p>
                       <FieldError message={errors.dogs?.message} />
                     </label>
@@ -459,7 +473,8 @@ export function CustomerQualificationPage() {
                       {yardSize === "over-quarter" ? (
                         <p className="flex items-start gap-2 rounded-2xl border border-[#F5B84B]/40 bg-[#FFF0CF] px-4 py-3 text-sm font-bold leading-6 text-[#7A4A00]">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                          At this time, we only service dog areas up to 1/4 acre.
+                          At this time, we only service dog areas up to{" "}
+                          {settings.maxYardSize}.
                         </p>
                       ) : null}
                       <FieldError message={errors.yardSize?.message} />

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CustomerQualificationPage } from "@/components/home/customer-qualification-page";
+import { getBusinessSettings } from "@/lib/settings/business-settings";
 
 export const metadata: Metadata = {
   title: "Request a Service | Dog Poop People",
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
     "Submit a service request for Dog Poop People in Loudoun County, Virginia.",
 };
 
-export default function Page() {
-  return <CustomerQualificationPage />;
+export default async function Page() {
+  const settings = await getBusinessSettings();
+
+  return <CustomerQualificationPage settings={settings} />;
 }

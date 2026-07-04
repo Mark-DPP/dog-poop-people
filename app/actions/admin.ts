@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireAdminUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/db/prisma";
 import { sendLeadStatusCustomerEmail } from "@/lib/email/notifications";
+import { saveBusinessSettings } from "@/lib/settings/business-settings";
 
 const leadStatusSchema = z.enum([
   "NEW_LEAD",
@@ -17,6 +18,29 @@ const leadStatusSchema = z.enum([
 ]);
 
 const contactMessageStatusSchema = z.enum(["UNREAD", "READ", "ARCHIVED"]);
+
+const moneySchema = z
+  .string()
+  .trim()
+  .regex(/^\$?\d+(\.\d{1,2})?$/, "Enter a valid price.")
+  .transform((value) => Math.round(Number(value.replace("$", "")) * 100))
+  .refine((value) => value >= 0 && value <= 100000, "Enter a price under $1,000.");
+
+const businessSettingsSchema = z.object({
+  firstVisit: moneySchema,
+  weeklyService: moneySchema,
+  extraDog: moneySchema,
+  serviceArea: z
+    .string()
+    .trim()
+    .min(2, "Enter a service area.")
+    .max(120, "Keep the service area under 120 characters."),
+  maxYardSize: z
+    .string()
+    .trim()
+    .min(2, "Enter a max yard size.")
+    .max(80, "Keep the max yard size under 80 characters."),
+});
 
 export type AdminActionState = {
   ok: boolean;
@@ -125,5 +149,65 @@ export async function updateContactMessageStatusAction(
   return {
     ok: true,
     message: "Message updated successfully.",
+  };
+}
+
+export async function updateBusinessSettingsAction(
+  prevState: AdminActionState = defaultState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  void prevState;
+  await requireAdminUser("/admin/settings");
+
+  const settings = businessSettingsSchema.safeParse({
+    firstVisit: getString(formData, "firstVisit"),
+    weeklyService: getString(formData, "weeklyService"),
+    extraDog: getString(formData, "extraDog"),
+    serviceArea: getString(formData, "serviceArea"),
+    maxYardSize: getString(formData, "maxYardSize"),
+  });
+
+  if (!settings.success) {
+    const error = settings.error.issues[0]?.message ?? "Please check the settings.";
+
+    return {
+      ok: false,
+      message: error,
+    };
+  }
+
+  try {
+    await saveBusinessSettings({
+      firstVisitCents: settings.data.firstVisit,
+      weeklyServiceCents: settings.data.weeklyService,
+      extraDogCents: settings.data.extraDog,
+      serviceArea: settings.data.serviceArea,
+      maxYardSize: settings.data.maxYardSize,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Settings could not be saved. Please try again.",
+    };
+  }
+
+  await prisma.adminActivity.create({
+    data: {
+      type: "BUSINESS_SETTINGS_UPDATED",
+      title: "Business settings updated",
+      description: "Pricing and qualification rules were updated.",
+    },
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/customer-qualification");
+  revalidatePath("/");
+
+  return {
+    ok: true,
+    message: "Settings saved successfully.",
   };
 }
