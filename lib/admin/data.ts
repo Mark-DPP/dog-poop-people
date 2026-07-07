@@ -87,6 +87,9 @@ export async function getLeads({
   const [items, total] = await Promise.all([
     prisma.lead.findMany({
       where,
+      include: {
+        serviceFrequency: true,
+      },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -102,7 +105,13 @@ export async function getLeads({
 }
 
 export async function getLeadById(id: string) {
-  return prisma.lead.findUnique({ where: { id } });
+  return prisma.lead.findUnique({
+    where: { id },
+    include: {
+      serviceFrequency: true,
+      yardSizeOption: true,
+    },
+  });
 }
 
 export async function getContactMessages({
@@ -130,6 +139,9 @@ export async function getCustomers() {
   return prisma.lead.findMany({
     where: {
       status: { in: ["SCHEDULED", "COMPLETED"] },
+    },
+    include: {
+      serviceFrequency: true,
     },
     orderBy: { updatedAt: "desc" },
   });

@@ -23,6 +23,8 @@ export const contactMessageStatusLabels = {
 export const serviceTypeLabels = {
   ONE_TIME: "One Time Service",
   WEEKLY: "Weekly Service",
+  BI_WEEKLY: "Bi-Weekly Service",
+  MONTHLY: "Monthly Service",
 } satisfies Record<ServiceType, string>;
 
 export const yardSizeLabels = {
@@ -52,4 +54,3 @@ export function formatDateTime(date: Date) {
 export function formatPercent(value: number) {
   return `${Math.round(value)}%`;
 }
-

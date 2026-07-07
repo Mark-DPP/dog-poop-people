@@ -37,6 +37,8 @@ enum ContactMessageStatus {
 enum ServiceType {
   ONE_TIME
   WEEKLY
+  BI_WEEKLY
+  MONTHLY
 }
 
 enum YardSize {
@@ -46,25 +48,34 @@ enum YardSize {
 }
 
 model Lead {
-  id                String      @id @default(cuid())
-  fullName          String      @db.VarChar(160)
-  email             String      @db.VarChar(255)
-  phone             String      @db.VarChar(40)
-  propertyAddress   String      @db.VarChar(255)
-  serviceType       ServiceType
-  numberOfDogs      Int
-  yardSize          YardSize
-  isInLoudounCounty Boolean
-  accessNotes       String?     @db.Text
-  message           String?     @db.Text
-  status            LeadStatus  @default(NEW_LEAD)
-  adminNotes        String?     @db.Text
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id                   String            @id @default(cuid())
+  fullName             String            @db.VarChar(160)
+  email                String            @db.VarChar(255)
+  phone                String            @db.VarChar(40)
+  propertyAddress      String            @db.VarChar(255)
+  serviceType          ServiceType
+  serviceFrequencyId   String?           @db.VarChar(40)
+  serviceFrequency     ServiceFrequency? @relation(fields: [serviceFrequencyId], references: [id])
+  numberOfDogs         Int
+  yardSize             YardSize
+  yardSizeOptionId     String?           @db.VarChar(40)
+  yardSizeOption       YardSizeOption?   @relation(fields: [yardSizeOptionId], references: [id])
+  selectedAddonIds     String[]          @default([])
+  selectedAddons       Json?
+  calculatedTotalCents Int?
+  isInLoudounCounty    Boolean
+  accessNotes          String?           @db.Text
+  message              String?           @db.Text
+  status               LeadStatus        @default(NEW_LEAD)
+  adminNotes           String?           @db.Text
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@index([status, createdAt])
   @@index([email])
   @@index([createdAt])
+  @@index([serviceFrequencyId])
+  @@index([yardSizeOptionId])
 }
 
 model ContactMessage {
@@ -94,12 +105,44 @@ model AdminActivity {
 }
 
 model BusinessSettings {
-  id                  String   @id @default("business")
-  firstVisitCents     Int      @default(10000)
-  weeklyServiceCents  Int      @default(2500)
-  extraDogCents       Int      @default(500)
-  serviceArea         String   @default("Loudoun County, VA") @db.VarChar(120)
-  maxYardSize         String   @default("1/4 acre") @db.VarChar(80)
-  updatedAt           DateTime @updatedAt
-  createdAt           DateTime @default(now())
+  id                 String   @id @default("business")
+  firstVisitCents    Int      @default(9000)
+  weeklyServiceCents Int      @default(1500)
+  extraDogCents      Int      @default(500)
+  serviceArea        String   @default("Loudoun County, VA") @db.VarChar(120)
+  maxYardSize        String   @default("1 Acre") @db.VarChar(80)
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+}
+
+model ServiceFrequency {
+  id             String   @id @db.VarChar(40)
+  name           String   @db.VarChar(80)
+  basePriceCents Int
+  serviceType    String   @db.VarChar(40)
+  sortOrder      Int      @unique
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  leads          Lead[]
+}
+
+model YardSizeOption {
+  id            String   @id @db.VarChar(40)
+  slot          Int      @unique
+  name          String   @db.VarChar(80)
+  extraFeeCents Int
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  leads         Lead[]
+}
+
+model AddonService {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(120)
+  price     Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, createdAt])
 }

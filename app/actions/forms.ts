@@ -14,6 +14,8 @@ import {
   type ContactFormValues,
   type ServiceRequestFormValues,
 } from "@/lib/forms";
+import type { ServiceType, YardSize } from "@/lib/generated/prisma/enums";
+import { calculatePriceCents } from "@/lib/settings/pricing";
 
 type SubmissionResult = {
   ok: boolean;
@@ -36,22 +38,32 @@ function toOptionalString(value?: string) {
   return trimmedValue ? trimmedValue : null;
 }
 
-function toServiceType(value: ServiceRequestFormValues["serviceType"]) {
-  return value === "one-time" ? "ONE_TIME" : "WEEKLY";
-}
-
-function toYardSize(value: ServiceRequestFormValues["yardSize"]) {
-  const yardSizes = {
-    "under-quarter": "UNDER_QUARTER",
-    "exact-quarter": "EXACT_QUARTER",
-    "over-quarter": "OVER_QUARTER",
-  } as const;
-
-  return yardSizes[value];
-}
-
 function toDogCount(value: ServiceRequestFormValues["dogs"]) {
   return value === "5+" ? 5 : Number(value);
+}
+
+function toServiceType(value: string): ServiceType {
+  const serviceTypes = ["ONE_TIME", "WEEKLY", "BI_WEEKLY", "MONTHLY"] as const;
+
+  if (serviceTypes.includes(value as ServiceType)) {
+    return value as ServiceType;
+  }
+
+  return "WEEKLY";
+}
+
+function toLegacyYardSize(name: string): YardSize {
+  const normalizedName = name.toLowerCase();
+
+  if (normalizedName.includes("1/16") || normalizedName.includes("1/8")) {
+    return "UNDER_QUARTER";
+  }
+
+  if (normalizedName.includes("1/4")) {
+    return "EXACT_QUARTER";
+  }
+
+  return "OVER_QUARTER";
 }
 
 function getClientErrorMessage(error: unknown) {
@@ -96,15 +108,65 @@ export async function submitLeadForm(
     assertEmailNotificationsConfigured();
 
     const createdLead = await prisma.$transaction(async (tx) => {
+      const [serviceFrequency, yardSizeOption, settings] = await Promise.all([
+        tx.serviceFrequency.findUnique({
+          where: { id: lead.serviceType },
+        }),
+        tx.yardSizeOption.findUnique({
+          where: { id: lead.yardSize },
+        }),
+        tx.businessSettings.findUnique({
+          where: { id: "business" },
+        }),
+      ]);
+
+      if (!serviceFrequency || !yardSizeOption) {
+        throw new Error("Please choose a valid service frequency and yard size.");
+      }
+
+      const numberOfDogs = toDogCount(lead.dogs);
+      const selectedAddonIds = lead.addonServiceIds ?? [];
+      const selectedAddons =
+        selectedAddonIds.length > 0
+          ? await tx.addonService.findMany({
+              where: {
+                id: { in: selectedAddonIds },
+                isActive: true,
+              },
+              orderBy: { createdAt: "asc" },
+            })
+          : [];
+      const selectedAddonSnapshot = selectedAddons.map((addon) => ({
+        id: addon.id,
+        name: addon.name,
+        price: addon.price,
+      }));
+      const addonTotalCents = selectedAddonSnapshot.reduce(
+        (total, addon) => total + addon.price,
+        0,
+      );
+      const calculatedTotalCents = calculatePriceCents({
+        basePriceCents: serviceFrequency.basePriceCents,
+        yardExtraFeeCents: yardSizeOption.extraFeeCents,
+        numberOfDogs,
+        addonTotalCents,
+        extraDogCents: settings?.extraDogCents,
+      });
+
       const savedLead = await tx.lead.create({
         data: {
           fullName: lead.fullName,
           email: lead.email,
           phone: lead.phone,
           propertyAddress: lead.address,
-          serviceType: toServiceType(lead.serviceType),
-          numberOfDogs: toDogCount(lead.dogs),
-          yardSize: toYardSize(lead.yardSize),
+          serviceType: toServiceType(serviceFrequency.serviceType),
+          serviceFrequencyId: serviceFrequency.id,
+          numberOfDogs,
+          yardSize: toLegacyYardSize(yardSizeOption.name),
+          yardSizeOptionId: yardSizeOption.id,
+          selectedAddonIds: selectedAddonSnapshot.map((addon) => addon.id),
+          selectedAddons: selectedAddonSnapshot,
+          calculatedTotalCents,
           isInLoudounCounty: lead.loudounCounty,
           accessNotes: toOptionalString(lead.accessNotes),
           message: toOptionalString(lead.message),
@@ -116,20 +178,34 @@ export async function submitLeadForm(
         data: {
           type: "LEAD_CREATED",
           title: "New service request received",
-          description: `${lead.fullName} submitted a ${lead.serviceType} request.`,
+          description: `${lead.fullName} submitted a ${serviceFrequency.name} request.`,
         },
       });
 
-      return savedLead;
+      return {
+        lead: savedLead,
+        serviceLabel: serviceFrequency.name,
+        yardSizeLabel: yardSizeOption.name,
+        selectedAddons: selectedAddonSnapshot,
+        calculatedTotalCents,
+      };
     });
 
     await sendLeadNotificationEmail({
       lead,
-      submittedAt: createdLead.createdAt ?? submittedAt,
+      submittedAt: createdLead.lead.createdAt ?? submittedAt,
+      serviceLabel: createdLead.serviceLabel,
+      yardSizeLabel: createdLead.yardSizeLabel,
+      selectedAddons: createdLead.selectedAddons,
+      calculatedTotalCents: createdLead.calculatedTotalCents,
     });
     await sendLeadReceivedCustomerEmail({
       lead,
-      submittedAt: createdLead.createdAt ?? submittedAt,
+      submittedAt: createdLead.lead.createdAt ?? submittedAt,
+      serviceLabel: createdLead.serviceLabel,
+      yardSizeLabel: createdLead.yardSizeLabel,
+      selectedAddons: createdLead.selectedAddons,
+      calculatedTotalCents: createdLead.calculatedTotalCents,
     });
 
     return {

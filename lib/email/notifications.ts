@@ -6,12 +6,13 @@ import type {
   ContactFormValues,
   ServiceRequestFormValues,
 } from "@/lib/forms";
-import type { Lead } from "@/lib/generated/prisma/client";
-import {
-  leadStatusLabels,
-  serviceTypeLabels,
-  yardSizeLabels,
-} from "@/lib/admin/format";
+import { defaultBusinessSettings } from "@/lib/settings/pricing";
+
+type SelectedAddonSnapshot = {
+  id: string;
+  name: string;
+  price: number;
+};
 
 type NotificationConfig = {
   resendApiKey: string;
@@ -70,18 +71,28 @@ function formatSubmittedDate(date: Date) {
   }).format(date);
 }
 
+function formatCurrencyForEmail(cents: number) {
+  const dollars = cents / 100;
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: Number.isInteger(dollars) ? 0 : 2,
+  }).format(dollars);
+}
+
 function serviceTypeLabel(serviceType: ServiceRequestFormValues["serviceType"]) {
-  return serviceType === "one-time" ? "One Time Service" : "Weekly Service";
+  return (
+    defaultBusinessSettings.serviceFrequencies.find((item) => item.id === serviceType)
+      ?.name ?? serviceType
+  );
 }
 
 function yardSizeLabel(yardSize: ServiceRequestFormValues["yardSize"]) {
-  const labels = {
-    "under-quarter": "Under 1/4 acre",
-    "exact-quarter": "Exactly 1/4 acre",
-    "over-quarter": "Over 1/4 acre",
-  } satisfies Record<ServiceRequestFormValues["yardSize"], string>;
-
-  return labels[yardSize];
+  return (
+    defaultBusinessSettings.yardSizeOptions.find((item) => item.id === yardSize)
+      ?.name ?? yardSize
+  );
 }
 
 function renderDetailRows(rows: Array<[string, string]>) {
@@ -221,9 +232,17 @@ async function sendNotificationEmail({
 export async function sendLeadNotificationEmail({
   lead,
   submittedAt,
+  serviceLabel,
+  yardSizeLabel: selectedYardSizeLabel,
+  selectedAddons = [],
+  calculatedTotalCents,
 }: {
   lead: ServiceRequestFormValues;
   submittedAt: Date;
+  serviceLabel?: string;
+  yardSizeLabel?: string;
+  selectedAddons?: SelectedAddonSnapshot[];
+  calculatedTotalCents?: number;
 }) {
   await sendNotificationEmail({
     subject: "New Service Request Received",
@@ -232,9 +251,22 @@ export async function sendLeadNotificationEmail({
       ["Email", lead.email],
       ["Phone", lead.phone],
       ["Property address", lead.address],
-      ["Service type", serviceTypeLabel(lead.serviceType)],
+      ["Service type", serviceLabel ?? serviceTypeLabel(lead.serviceType)],
       ["Number of dogs", lead.dogs],
-      ["Yard size", yardSizeLabel(lead.yardSize)],
+      ["Yard size", selectedYardSizeLabel ?? yardSizeLabel(lead.yardSize)],
+      [
+        "Selected add-ons",
+        selectedAddons.length > 0
+          ? selectedAddons
+              .map((addon) => `${addon.name} (${formatCurrencyForEmail(addon.price)})`)
+              .join("\n")
+          : "None",
+      ],
+      ...(typeof calculatedTotalCents === "number"
+        ? ([["Calculated total", formatCurrencyForEmail(calculatedTotalCents)]] as Array<
+            [string, string]
+          >)
+        : []),
       [
         "Loudoun County confirmation",
         lead.loudounCounty ? "Confirmed" : "Not confirmed",
@@ -249,9 +281,17 @@ export async function sendLeadNotificationEmail({
 export async function sendLeadReceivedCustomerEmail({
   lead,
   submittedAt,
+  serviceLabel,
+  yardSizeLabel: selectedYardSizeLabel,
+  selectedAddons = [],
+  calculatedTotalCents,
 }: {
   lead: ServiceRequestFormValues;
   submittedAt: Date;
+  serviceLabel?: string;
+  yardSizeLabel?: string;
+  selectedAddons?: SelectedAddonSnapshot[];
+  calculatedTotalCents?: number;
 }) {
   await sendNotificationEmail({
     to: lead.email,
@@ -265,9 +305,22 @@ export async function sendLeadReceivedCustomerEmail({
       ["Email", lead.email],
       ["Phone", lead.phone],
       ["Property address", lead.address],
-      ["Service type", serviceTypeLabel(lead.serviceType)],
+      ["Service type", serviceLabel ?? serviceTypeLabel(lead.serviceType)],
       ["Number of dogs", lead.dogs],
-      ["Yard size", yardSizeLabel(lead.yardSize)],
+      ["Yard size", selectedYardSizeLabel ?? yardSizeLabel(lead.yardSize)],
+      [
+        "Selected add-ons",
+        selectedAddons.length > 0
+          ? selectedAddons
+              .map((addon) => `${addon.name} (${formatCurrencyForEmail(addon.price)})`)
+              .join("\n")
+          : "None",
+      ],
+      ...(typeof calculatedTotalCents === "number"
+        ? ([["Calculated total", formatCurrencyForEmail(calculatedTotalCents)]] as Array<
+            [string, string]
+          >)
+        : []),
       ["Submitted date", formatSubmittedDate(submittedAt)],
     ],
   });
@@ -311,41 +364,6 @@ export async function sendContactAutoReplyEmail({
       ["Phone", formatOptional(message.phone)],
       ["Message", message.message],
       ["Submitted date", formatSubmittedDate(submittedAt)],
-    ],
-  });
-}
-
-function getCustomerStatusMessage(status: Lead["status"]) {
-  const messages = {
-    NEW_LEAD: "We received your request and will review it soon.",
-    CONTACTED: "We have marked your request as contacted after follow-up.",
-    SCHEDULED: "Your service request has been scheduled.",
-    COMPLETED: "Your service has been marked completed. Thank you for choosing Dog Poop People.",
-    CLOSED: "Your request has been closed.",
-    NOT_QUALIFIED:
-      "Your request is currently marked not qualified for our service rules.",
-  } satisfies Record<Lead["status"], string>;
-
-  return messages[status];
-}
-
-export async function sendLeadStatusCustomerEmail({ lead }: { lead: Lead }) {
-  await sendNotificationEmail({
-    to: lead.email,
-    subject: `Dog Poop People Request Update: ${leadStatusLabels[lead.status]}`,
-    intro: getCustomerStatusMessage(lead.status),
-    nextStep:
-      "reply to this email or contact us if you have questions about your service request.",
-    rows: [
-      ["Name", lead.fullName],
-      ["Email", lead.email],
-      ["Phone", lead.phone],
-      ["Property address", lead.propertyAddress],
-      ["Service type", serviceTypeLabels[lead.serviceType]],
-      ["Current status", leadStatusLabels[lead.status]],
-      ["Number of dogs", String(lead.numberOfDogs)],
-      ["Yard size", yardSizeLabels[lead.yardSize]],
-      ["Updated date", formatSubmittedDate(lead.updatedAt)],
     ],
   });
 }

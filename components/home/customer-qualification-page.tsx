@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import {
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
@@ -30,6 +29,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { serviceRequestSchema, type ServiceRequestFormValues } from "@/lib/forms";
 import {
+  calculatePriceCents,
   formatCurrency,
   type BusinessSettingsValues,
 } from "@/lib/settings/pricing";
@@ -106,6 +106,7 @@ export function CustomerQualificationPage({
       serviceType: undefined,
       dogs: undefined,
       yardSize: undefined,
+      addonServiceIds: [],
       loudounCounty: false,
       accessNotes: "",
       message: "",
@@ -113,14 +114,34 @@ export function CustomerQualificationPage({
     },
     mode: "onTouched",
   });
+  const serviceType = useWatch({ control, name: "serviceType" });
+  const dogs = useWatch({ control, name: "dogs" });
   const yardSize = useWatch({ control, name: "yardSize" });
+  const addonServiceIds = useWatch({ control, name: "addonServiceIds" }) ?? [];
+  const activeAddonServices = settings.addonServices.filter((addon) => addon.isActive);
+  const selectedAddonTotalCents = activeAddonServices
+    .filter((addon) => addonServiceIds.includes(addon.id))
+    .reduce((total, addon) => total + addon.price, 0);
+  const selectedServiceFrequency = settings.serviceFrequencies.find(
+    (frequency) => frequency.id === serviceType,
+  );
+  const selectedYardSize = settings.yardSizeOptions.find(
+    (option) => option.id === yardSize,
+  );
+  const selectedDogCount = dogs === "5+" ? 5 : Number(dogs || 0);
+  const calculatedTotalCents =
+    selectedServiceFrequency && selectedYardSize && selectedDogCount > 0
+      ? calculatePriceCents({
+          basePriceCents: selectedServiceFrequency.basePriceCents,
+          yardExtraFeeCents: selectedYardSize.extraFeeCents,
+          numberOfDogs: selectedDogCount,
+          addonTotalCents: selectedAddonTotalCents,
+          extraDogCents: settings.extraDogCents,
+        })
+      : null;
 
   const nextStep = async () => {
     const isValid = await trigger(steps[activeStep].fields, { shouldFocus: true });
-
-    if (activeStep === 2 && yardSize === "over-quarter") {
-      return;
-    }
 
     if (isValid) {
       setActiveStep((step) => {
@@ -170,6 +191,7 @@ export function CustomerQualificationPage({
       serviceType: undefined,
       dogs: undefined,
       yardSize: undefined,
+      addonServiceIds: [],
       loudounCounty: false,
       accessNotes: "",
       message: "",
@@ -206,8 +228,7 @@ export function CustomerQualificationPage({
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/82">
               A simple four-step signup request for {settings.serviceArea} homes,
-              weekly cleanup, one-time service, and dog areas up to{" "}
-              {settings.maxYardSize}.
+              flexible cleanup frequencies, and dog areas up to {settings.maxYardSize}.
             </p>
           </motion.div>
 
@@ -220,7 +241,7 @@ export function CustomerQualificationPage({
             <div className="grid gap-4 text-sm font-semibold leading-6 text-white/78">
               {[
                 `${settings.serviceArea} only`,
-                "One-time or weekly service only",
+                `${settings.serviceFrequencies.map((item) => item.name).join(", ")} available`,
                 `Dog areas up to ${settings.maxYardSize}`,
                 `+${formatCurrency(settings.extraDogCents)} per additional dog after the first`,
               ].map((item) => (
@@ -321,6 +342,7 @@ export function CustomerQualificationPage({
                         serviceType: undefined,
                         dogs: undefined,
                         yardSize: undefined,
+                        addonServiceIds: [],
                         loudounCounty: false,
                         accessNotes: "",
                         message: "",
@@ -432,12 +454,12 @@ export function CustomerQualificationPage({
                       <SelectWrap>
                         <Select {...register("serviceType")} defaultValue="">
                           <option value="" disabled>Choose service</option>
-                          <option value="one-time">
-                            One Time Service {formatCurrency(settings.firstVisitCents)}
-                          </option>
-                          <option value="weekly">
-                            Weekly Service {formatCurrency(settings.weeklyServiceCents)} per visit
-                          </option>
+                          {settings.serviceFrequencies.map((frequency) => (
+                            <option key={frequency.id} value={frequency.id}>
+                              {frequency.name}{" "}
+                              {formatCurrency(frequency.basePriceCents)}
+                            </option>
+                          ))}
                         </Select>
                       </SelectWrap>
                       <FieldError message={errors.serviceType?.message} />
@@ -465,20 +487,50 @@ export function CustomerQualificationPage({
                       <SelectWrap>
                         <Select {...register("yardSize")} defaultValue="">
                           <option value="" disabled>Choose yard size</option>
-                          <option value="under-quarter">Under 1/4 acre</option>
-                          <option value="exact-quarter">Exactly 1/4 acre</option>
-                          <option value="over-quarter">Over 1/4 acre</option>
+                          {settings.yardSizeOptions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.name} +{formatCurrency(option.extraFeeCents)}
+                            </option>
+                          ))}
                         </Select>
                       </SelectWrap>
-                      {yardSize === "over-quarter" ? (
-                        <p className="flex items-start gap-2 rounded-2xl border border-[#F5B84B]/40 bg-[#FFF0CF] px-4 py-3 text-sm font-bold leading-6 text-[#7A4A00]">
-                          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                          At this time, we only service dog areas up to{" "}
-                          {settings.maxYardSize}.
-                        </p>
-                      ) : null}
                       <FieldError message={errors.yardSize?.message} />
                     </label>
+                    {activeAddonServices.length > 0 ? (
+                      <div className="grid gap-3 rounded-[1.5rem] border border-[#0F5A24]/10 bg-[#F7F9F4] p-4 md:col-span-3">
+                        <p className="text-sm font-extrabold text-[#12321C]">
+                          Optional Add-on Services
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {activeAddonServices.map((addon) => (
+                            <label
+                              key={addon.id}
+                              className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3"
+                            >
+                              <input
+                                type="checkbox"
+                                value={addon.id}
+                                className="mt-1 size-5 rounded border-[#0F5A24]/24 accent-[#65C22E]"
+                                {...register("addonServiceIds")}
+                              />
+                              <span className="text-sm font-extrabold leading-6 text-[#12321C]">
+                                {addon.name} (+{formatCurrency(addon.price)})
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {calculatedTotalCents !== null ? (
+                      <div className="rounded-[1.5rem] border border-[#65C22E]/28 bg-[#E8F7DF] p-4 md:col-span-3">
+                        <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#0F5A24]/70">
+                          Estimated Total
+                        </p>
+                        <p className="mt-2 font-heading text-3xl font-extrabold text-[#0F5A24]">
+                          {formatCurrency(calculatedTotalCents)}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 

@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireAdminUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/db/prisma";
-import { sendLeadStatusCustomerEmail } from "@/lib/email/notifications";
 import { saveBusinessSettings } from "@/lib/settings/business-settings";
+import { defaultBusinessSettings } from "@/lib/settings/pricing";
 
 const leadStatusSchema = z.enum([
   "NEW_LEAD",
@@ -27,9 +28,29 @@ const moneySchema = z
   .refine((value) => value >= 0 && value <= 100000, "Enter a price under $1,000.");
 
 const businessSettingsSchema = z.object({
-  firstVisit: moneySchema,
-  weeklyService: moneySchema,
-  extraDog: moneySchema,
+  serviceFrequencies: z.array(
+    z.object({
+      id: z.string().min(1).max(40),
+      name: z.string().min(1).max(80),
+      basePriceCents: z.number().int().min(0).max(100000),
+      serviceType: z.string().min(1).max(40),
+      sortOrder: z.number().int().min(1).max(10),
+    }),
+  ),
+  yardSizeOptions: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        slot: z.number().int().min(1).max(5),
+        name: z
+          .string()
+          .trim()
+          .min(1, "Enter a yard size name.")
+          .max(80, "Keep yard size names under 80 characters."),
+        extraFeeCents: z.number().int().min(0).max(100000),
+      }),
+    )
+    .length(5, "Exactly five yard size slots are required."),
   serviceArea: z
     .string()
     .trim()
@@ -40,6 +61,16 @@ const businessSettingsSchema = z.object({
     .trim()
     .min(2, "Enter a max yard size.")
     .max(80, "Keep the max yard size under 80 characters."),
+});
+
+const addonServiceSchema = z.object({
+  id: z.string().trim().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Enter a service name.")
+    .max(120, "Keep service names under 120 characters."),
+  price: z.number().int().min(0).max(100000),
 });
 
 export type AdminActionState = {
@@ -55,6 +86,18 @@ const defaultState: AdminActionState = {
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function getMoneyCents(formData: FormData, key: string) {
+  const parsedValue = moneySchema.safeParse(getString(formData, key));
+
+  return parsedValue.success ? parsedValue.data : Number.NaN;
+}
+
+function revalidatePricingPaths() {
+  revalidatePath("/admin/settings");
+  revalidatePath("/customer-qualification");
+  revalidatePath("/");
 }
 
 export async function updateLeadAction(
@@ -91,15 +134,6 @@ export async function updateLeadAction(
     },
   });
 
-  let emailMessage = " Customer email sent.";
-
-  try {
-    await sendLeadStatusCustomerEmail({ lead });
-  } catch {
-    emailMessage =
-      " Customer email could not be sent. Check Resend environment variables and logs.";
-  }
-
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/leads");
   revalidatePath(`/admin/leads/${id}`);
@@ -108,8 +142,45 @@ export async function updateLeadAction(
 
   return {
     ok: true,
-    message: `Lead updated successfully.${emailMessage}`,
+    message: "Lead updated successfully.",
   };
+}
+
+export async function deleteLeadAction(
+  prevState: AdminActionState = defaultState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  void prevState;
+  await requireAdminUser("/admin/leads");
+
+  const id = getString(formData, "id");
+
+  if (!id) {
+    return {
+      ok: false,
+      message: "Lead could not be found.",
+    };
+  }
+
+  const lead = await prisma.lead.delete({
+    where: { id },
+  });
+
+  await prisma.adminActivity.create({
+    data: {
+      type: "LEAD_DELETED",
+      title: "Lead deleted",
+      description: `${lead.fullName} was permanently deleted.`,
+    },
+  });
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/leads");
+  revalidatePath(`/admin/leads/${id}`);
+  revalidatePath("/admin/customers");
+  revalidatePath("/admin/reports");
+
+  redirect("/admin/dashboard");
 }
 
 export async function updateContactMessageStatusAction(
@@ -160,9 +231,18 @@ export async function updateBusinessSettingsAction(
   await requireAdminUser("/admin/settings");
 
   const settings = businessSettingsSchema.safeParse({
-    firstVisit: getString(formData, "firstVisit"),
-    weeklyService: getString(formData, "weeklyService"),
-    extraDog: getString(formData, "extraDog"),
+    serviceFrequencies: defaultBusinessSettings.serviceFrequencies.map(
+      (frequency) => ({
+        ...frequency,
+        basePriceCents: getMoneyCents(formData, `serviceFrequency:${frequency.id}`),
+      }),
+    ),
+    yardSizeOptions: defaultBusinessSettings.yardSizeOptions.map((option) => ({
+      id: option.id,
+      slot: option.slot,
+      name: getString(formData, `yardSizeName:${option.slot}`),
+      extraFeeCents: getMoneyCents(formData, `yardSizeFee:${option.slot}`),
+    })),
     serviceArea: getString(formData, "serviceArea"),
     maxYardSize: getString(formData, "maxYardSize"),
   });
@@ -178,11 +258,12 @@ export async function updateBusinessSettingsAction(
 
   try {
     await saveBusinessSettings({
-      firstVisitCents: settings.data.firstVisit,
-      weeklyServiceCents: settings.data.weeklyService,
-      extraDogCents: settings.data.extraDog,
+      extraDogCents: defaultBusinessSettings.extraDogCents,
       serviceArea: settings.data.serviceArea,
       maxYardSize: settings.data.maxYardSize,
+      serviceFrequencies: settings.data.serviceFrequencies,
+      yardSizeOptions: settings.data.yardSizeOptions,
+      addonServices: [],
     });
   } catch (error) {
     return {
@@ -202,12 +283,137 @@ export async function updateBusinessSettingsAction(
     },
   });
 
-  revalidatePath("/admin/settings");
-  revalidatePath("/customer-qualification");
-  revalidatePath("/");
+  revalidatePricingPaths();
 
   return {
     ok: true,
     message: "Settings saved successfully.",
+  };
+}
+
+export async function saveAddonServiceAction(
+  prevState: AdminActionState = defaultState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  void prevState;
+  await requireAdminUser("/admin/settings");
+
+  const addon = addonServiceSchema.safeParse({
+    id: getString(formData, "id") || undefined,
+    name: getString(formData, "name"),
+    price: getMoneyCents(formData, "price"),
+  });
+
+  if (!addon.success) {
+    return {
+      ok: false,
+      message: addon.error.issues[0]?.message ?? "Please check the add-on.",
+    };
+  }
+
+  const savedAddon = addon.data.id
+    ? await prisma.addonService.update({
+        where: { id: addon.data.id },
+        data: {
+          name: addon.data.name,
+          price: addon.data.price,
+        },
+      })
+    : await prisma.addonService.create({
+        data: {
+          name: addon.data.name,
+          price: addon.data.price,
+          isActive: true,
+        },
+      });
+
+  await prisma.adminActivity.create({
+    data: {
+      type: addon.data.id ? "ADDON_SERVICE_UPDATED" : "ADDON_SERVICE_CREATED",
+      title: addon.data.id ? "Add-on service updated" : "Add-on service created",
+      description: `${savedAddon.name} was saved.`,
+    },
+  });
+
+  revalidatePricingPaths();
+
+  return {
+    ok: true,
+    message: "Add-on service saved successfully.",
+  };
+}
+
+export async function toggleAddonServiceAction(
+  prevState: AdminActionState = defaultState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  void prevState;
+  await requireAdminUser("/admin/settings");
+
+  const id = getString(formData, "id");
+
+  if (!id) {
+    return {
+      ok: false,
+      message: "Add-on service could not be found.",
+    };
+  }
+
+  const addon = await prisma.addonService.update({
+    where: { id },
+    data: {
+      isActive: getString(formData, "isActive") === "on",
+    },
+  });
+
+  await prisma.adminActivity.create({
+    data: {
+      type: "ADDON_SERVICE_TOGGLED",
+      title: "Add-on service updated",
+      description: `${addon.name} was ${addon.isActive ? "enabled" : "disabled"}.`,
+    },
+  });
+
+  revalidatePricingPaths();
+
+  return {
+    ok: true,
+    message: "Add-on service updated.",
+  };
+}
+
+export async function deleteAddonServiceAction(
+  prevState: AdminActionState = defaultState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  void prevState;
+  await requireAdminUser("/admin/settings");
+
+  const id = getString(formData, "id");
+
+  if (!id) {
+    return {
+      ok: false,
+      message: "Add-on service could not be found.",
+    };
+  }
+
+  const addon = await prisma.addonService.delete({
+    where: { id },
+  });
+
+  await prisma.adminActivity.create({
+    data: {
+      type: "ADDON_SERVICE_DELETED",
+      title: "Add-on service deleted",
+      description: `${addon.name} was deleted.`,
+    },
+  });
+
+  revalidatePricingPaths();
+
+  return {
+    ok: true,
+    message: "Add-on service deleted.",
   };
 }

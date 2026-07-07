@@ -62,7 +62,8 @@ export default async function Page() {
                         {customer.propertyAddress}
                       </td>
                       <td className="px-4 py-4 text-sm font-bold text-[#405244]">
-                        {serviceTypeLabels[customer.serviceType]}
+                        {customer.serviceFrequency?.name ??
+                          serviceTypeLabels[customer.serviceType]}
                       </td>
                       <td className="px-4 py-4 text-sm font-bold text-[#405244]">
                         {customer.numberOfDogs}

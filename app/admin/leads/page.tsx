@@ -44,7 +44,12 @@ function parseLeadStatus(value?: string): LeadStatus | "ALL" {
 }
 
 function parseServiceType(value?: string): ServiceType | "ALL" {
-  return value === "ONE_TIME" || value === "WEEKLY" ? value : "ALL";
+  return value === "ONE_TIME" ||
+    value === "WEEKLY" ||
+    value === "BI_WEEKLY" ||
+    value === "MONTHLY"
+    ? value
+    : "ALL";
 }
 
 export default async function Page({
@@ -154,7 +159,7 @@ export default async function Page({
                       {lead.propertyAddress}
                     </td>
                     <td className="px-4 py-4 text-sm font-bold text-[#405244]">
-                      {serviceTypeLabels[lead.serviceType]}
+                      {lead.serviceFrequency?.name ?? serviceTypeLabels[lead.serviceType]}
                     </td>
                     <td className="px-4 py-4">
                       <StatusBadge label={leadStatusLabels[lead.status]} />
@@ -187,4 +192,3 @@ export default async function Page({
     </AdminShell>
   );
 }
-

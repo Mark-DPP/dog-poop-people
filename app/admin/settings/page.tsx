@@ -16,8 +16,10 @@ export default async function Page() {
   const settings = await getBusinessSettings();
 
   const rules = [
-    ["First Visit", formatCurrency(settings.firstVisitCents)],
-    ["Weekly Service", formatCurrency(settings.weeklyServiceCents)],
+    ...settings.serviceFrequencies.map(
+      (frequency) =>
+        [frequency.name, formatCurrency(frequency.basePriceCents)] as const,
+    ),
     ["Extra Dog", formatCurrency(settings.extraDogCents)],
     ["Service Area", settings.serviceArea],
     ["Max Yard Size", settings.maxYardSize],

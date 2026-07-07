@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import {
+  deleteLeadAction,
   updateContactMessageStatusAction,
   updateLeadAction,
   type AdminActionState,
@@ -88,6 +89,31 @@ export function QuickLeadStatusForm({
       <input type="hidden" name="status" value={status} />
       <Button type="submit" variant="outline" disabled={pending}>
         {pending ? "Updating..." : label}
+      </Button>
+    </form>
+  );
+}
+
+export function DeleteLeadForm({ id }: { id: string }) {
+  const [state, formAction, pending] = useActionState(deleteLeadAction, initialState);
+
+  return (
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (
+          !window.confirm(
+            "Delete this customer permanently? This cannot be undone.",
+          )
+        ) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <Toast state={state} />
+      <input type="hidden" name="id" value={id} />
+      <Button type="submit" variant="outline" disabled={pending}>
+        {pending ? "Deleting..." : "Delete"}
       </Button>
     </form>
   );
