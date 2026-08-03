@@ -80,39 +80,52 @@ const features: Array<{
 
 const pricingPlans = [
   {
-    title: "One Time Cleanup",
-    price: "$100",
-    note: "A thorough reset for yards that need a fresh start.",
+    title: "First Visit",
+    price: "$90",
+    note: "A thorough first cleanup for yards that need a fresh start.",
     items: [
-      "Complete yard cleanup",
-      "Safe disposal",
-      "Property inspection",
-      "Great for first-time customers",
+      "One-time initial cleanup",
+      "Complete yard service",
+      "Safe waste removal",
+      "Base price before adjustments",
     ],
   },
   {
     title: "Weekly Service",
-    price: "$25",
-    note: "The easiest way to keep your yard consistently clean.",
+    price: "$15",
+    note: "The lowest base price for consistently clean yards.",
     badge: "Most Popular",
     featured: true,
+    suffix: "per visit",
     items: [
       "Scheduled weekly visits",
-      "Consistent clean yard",
+      "Consistent yard upkeep",
       "Flexible cancellation",
-      "Best value",
+      "Lowest recurring base price",
     ],
   },
   {
-    title: "Extra Dogs",
-    price: "+$5",
-    note: "Transparent add-on pricing for multi-dog homes.",
-    suffix: "per additional dog",
+    title: "Bi-Weekly Service",
+    price: "$25",
+    note: "A balanced base price for service every other week.",
+    suffix: "per visit",
     items: [
-      "Simple per-dog add-on",
-      "Added to your visit price",
-      "Perfect for busy households",
-      "No hidden adjustment fees",
+      "Service every two weeks",
+      "Consistent yard upkeep",
+      "Flexible cancellation",
+      "Balanced schedule and value",
+    ],
+  },
+  {
+    title: "Monthly Service",
+    price: "$50",
+    note: "A simple base price for a monthly yard refresh.",
+    suffix: "per visit",
+    items: [
+      "One visit each month",
+      "Routine yard refresh",
+      "Flexible cancellation",
+      "Great for lighter needs",
     ],
   },
 ];
@@ -159,7 +172,7 @@ const faqs = [
   {
     question: "How much does an extra dog cost?",
     answer:
-      "Extra dogs are an additional $5 per dog, keeping multi-dog pricing clear and predictable.",
+      "Additional dogs cost $5 per dog after the first, keeping multi-dog pricing clear and predictable.",
   },
   {
     question: "What happens after I submit the form?",
@@ -385,14 +398,18 @@ export function InfoSections() {
             transition={{ duration: 0.65 }}
           >
             <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#B68020]">
-              Our Simple Pricing
+              Our Base Pricing
             </p>
             <h2 className="mt-4 font-heading text-4xl font-extrabold tracking-tight text-[#0F5A24] sm:text-5xl">
-              Premium cleanup with pricing you can read in seconds.
+              Simple base pricing for every service schedule.
             </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[#405244]">
+              Every amount below is a starting price. Your final price is based
+              on the service and property details you select.
+            </p>
           </motion.div>
 
-          <div className="mt-14 grid gap-5 lg:grid-cols-3 lg:items-stretch">
+          <div className="mt-14 grid gap-5 lg:grid-cols-4 lg:items-stretch">
             {pricingPlans.map((plan, index) => (
               <motion.article
                 key={plan.title}
@@ -426,6 +443,9 @@ export function InfoSections() {
                 </div>
 
                 <div className="mt-9">
+                  <p className={`text-sm font-extrabold ${plan.featured ? "text-white/70" : "text-[#405244]"}`}>
+                    Starting at
+                  </p>
                   <p className="font-heading text-6xl font-extrabold tracking-tight">
                     {plan.price}
                   </p>
@@ -460,6 +480,33 @@ export function InfoSections() {
               </motion.article>
             ))}
           </div>
+
+          <motion.div
+            className="mx-auto mt-8 max-w-4xl rounded-[2rem] border border-[#0F5A24]/10 bg-white/88 p-6 text-[#0F5A24] shadow-[0_18px_54px_rgba(31,46,35,0.08)] sm:p-7"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.4 }}
+            variants={reveal}
+            transition={{ duration: 0.58 }}
+          >
+            <p className="font-heading text-xl font-extrabold">
+              Final pricing is calculated using:
+            </p>
+            <ul className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[
+                "Selected service frequency",
+                "Yard size",
+                "Additional dogs ($5 per dog after the first)",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3 text-sm font-semibold leading-6 text-[#233528]/82">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[#E8F7DF] text-[#0F5A24]">
+                    <Check className="size-3.5" />
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
         </div>
       </section>
 

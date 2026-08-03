@@ -10,22 +10,31 @@ import { Button } from "@/components/ui/button";
 
 const pricing = [
   {
-    title: "First Visit / One Time Service",
-    price: "$100",
-    note: "Perfect for a fresh reset.",
+    title: "First Visit",
+    price: "$90",
+    note: "A one-time cleanup for a fresh reset.",
     accent: "#F5B84B",
   },
   {
     title: "Weekly Service",
-    price: "$25",
+    price: "$15",
+    suffix: "/ Visit",
     note: "Reliable cleanup on repeat.",
     accent: "#65C22E",
   },
   {
-    title: "Additional Dogs",
-    price: "+$5",
-    note: "Simple pricing per visit.",
+    title: "Bi-Weekly Service",
+    price: "$25",
+    suffix: "/ Visit",
+    note: "A flexible every-other-week schedule.",
     accent: "#9ED4FF",
+  },
+  {
+    title: "Monthly Service",
+    price: "$50",
+    suffix: "/ Visit",
+    note: "A monthly refresh for lighter needs.",
+    accent: "#F5B84B",
   },
 ];
 
@@ -120,7 +129,7 @@ export function HeroSection() {
 
         <motion.div
           id="pricing"
-          className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 lg:justify-self-end"
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 lg:justify-self-end"
           initial={{ y: 34, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
@@ -144,19 +153,27 @@ export function HeroSection() {
               <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#0F5A24]/62">
                 {item.title}
               </p>
-              <div className="mt-4 flex items-end justify-between gap-4">
+              <p className="mt-4 text-sm font-extrabold text-[#0F5A24]/70">
+                Starting at
+              </p>
+              <div className="mt-1 flex items-end justify-between gap-4">
                 <p className="font-heading text-4xl font-extrabold tracking-tight sm:text-5xl">
                   {item.price}
                 </p>
-                <span className="rounded-full bg-[#65C22E]/18 px-3 py-1 text-xs font-extrabold text-[#0F5A24]">
-                  Per visit
-                </span>
+                {item.suffix ? (
+                  <span className="rounded-full bg-[#65C22E]/18 px-3 py-1 text-xs font-extrabold text-[#0F5A24]">
+                    {item.suffix}
+                  </span>
+                ) : null}
               </div>
               <p className="mt-4 text-sm font-medium leading-6 text-[#0F5A24]/70">
                 {item.note}
               </p>
             </motion.article>
           ))}
+          <p className="px-2 text-center text-xs font-semibold leading-5 text-[#FFF8E6]/78 sm:col-span-2 lg:col-span-1 lg:max-w-[21rem]">
+            Yard size and additional dogs may affect the final price.
+          </p>
         </motion.div>
       </div>
     </section>
