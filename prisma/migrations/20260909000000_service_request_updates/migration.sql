@@ -1,0 +1,13 @@
+ALTER TABLE "Lead"
+  ADD COLUMN "street" VARCHAR(255),
+  ADD COLUMN "city" VARCHAR(120),
+  ADD COLUMN "state" VARCHAR(80),
+  ADD COLUMN "zipCode" VARCHAR(20),
+  ADD COLUMN "isOneTimeClean" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "yardSizeUnknown" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "propertyArea" VARCHAR(40),
+  ADD COLUMN "propertyAreaDetail" TEXT;
+
+ALTER TABLE "Lead" ALTER COLUMN "yardSize" DROP NOT NULL;
+
+ALTER TABLE "Lead" ALTER COLUMN "isInLoudounCounty" SET DEFAULT false;

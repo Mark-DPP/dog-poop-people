@@ -53,17 +53,25 @@ model Lead {
   email                String            @db.VarChar(255)
   phone                String            @db.VarChar(40)
   propertyAddress      String            @db.VarChar(255)
+  street               String?           @db.VarChar(255)
+  city                 String?           @db.VarChar(120)
+  state                String?           @db.VarChar(80)
+  zipCode              String?           @db.VarChar(20)
   serviceType          ServiceType
   serviceFrequencyId   String?           @db.VarChar(40)
   serviceFrequency     ServiceFrequency? @relation(fields: [serviceFrequencyId], references: [id])
+  isOneTimeClean       Boolean           @default(false)
   numberOfDogs         Int
-  yardSize             YardSize
+  yardSize             YardSize?
   yardSizeOptionId     String?           @db.VarChar(40)
   yardSizeOption       YardSizeOption?   @relation(fields: [yardSizeOptionId], references: [id])
+  yardSizeUnknown      Boolean           @default(false)
+  propertyArea         String?           @db.VarChar(40)
+  propertyAreaDetail   String?           @db.Text
   selectedAddonIds     String[]          @default([])
   selectedAddons       Json?
   calculatedTotalCents Int?
-  isInLoudounCounty    Boolean
+  isInLoudounCounty    Boolean           @default(false)
   accessNotes          String?           @db.Text
   message              String?           @db.Text
   status               LeadStatus        @default(NEW_LEAD)

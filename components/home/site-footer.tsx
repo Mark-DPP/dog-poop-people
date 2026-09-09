@@ -51,11 +51,21 @@ export function SiteFooter() {
           <div className="mt-5 grid gap-4 text-sm font-semibold text-white/70">
             <p className="flex items-center gap-3">
               <Phone className="size-4 text-[#65C22E]" />
-              Phone: Coming Soon
+              <a
+                href="tel:+14045309361"
+                className="transition hover:text-[#65C22E]"
+              >
+                Phone: (404) 530-9361
+              </a>
             </p>
             <p className="flex items-center gap-3">
               <Mail className="size-4 text-[#65C22E]" />
-              Email: Coming Soon
+              <a
+                href="mailto:Mark_Moger@dogpooppeople.com"
+                className="transition hover:text-[#65C22E]"
+              >
+                Email: Mark_Moger@dogpooppeople.com
+              </a>
             </p>
             <p className="flex items-center gap-3">
               <MapPinned className="size-4 text-[#65C22E]" />
