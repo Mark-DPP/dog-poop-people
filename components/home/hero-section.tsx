@@ -61,9 +61,9 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(18,22,18,0.38)_0%,rgba(18,22,18,0)_46%,rgba(18,22,18,0.82)_100%)]" />
       <HeroFieldLines className="bottom-0 right-0 hidden w-[48vw] max-w-3xl lg:block" />
 
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl items-end gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <motion.div
-          className="max-w-3xl pt-8 text-white"
+          className="max-w-3xl text-white"
           initial="hidden"
           animate="visible"
           transition={{ staggerChildren: 0.07, delayChildren: 0.02 }}
