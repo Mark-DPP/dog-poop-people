@@ -642,8 +642,7 @@ export function InfoSections() {
               Answers before we step into the yard.
             </h2>
             <p className="mt-5 max-w-xl leading-8 text-[#405244]">
-              Straightforward service deserves straightforward answers. These
-              placeholders can be refined once operations details are final.
+              Straightforward service deserves straightforward answers.
             </p>
           </motion.div>
 

@@ -27,7 +27,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { serviceRequestSchema, type ServiceRequestFormValues } from "@/lib/forms";
+import {
+  YARD_SIZE_UNKNOWN,
+  propertyAreaValues,
+  propertyAreaLabels,
+  serviceRequestSchema,
+  type ServiceRequestFormValues,
+} from "@/lib/forms";
 import {
   calculatePriceCents,
   formatCurrency,
@@ -38,6 +44,26 @@ function getTimestamp() {
   return new Date().getTime();
 }
 
+const emptyForm: ServiceRequestFormValues = {
+  fullName: "",
+  email: "",
+  phone: "",
+  street: "",
+  city: "",
+  state: "",
+  zip: "",
+  oneTimeClean: false,
+  serviceType: "",
+  dogs: undefined as unknown as ServiceRequestFormValues["dogs"],
+  yardSize: "",
+  propertyArea: undefined as unknown as ServiceRequestFormValues["propertyArea"],
+  propertyAreaDetail: "",
+  addonServiceIds: [],
+  accessNotes: "",
+  message: "",
+  website: "",
+};
+
 const steps = [
   {
     title: "Your Details",
@@ -46,13 +72,20 @@ const steps = [
   },
   {
     title: "Property",
-    copy: "Confirm address and service area.",
-    fields: ["address", "loudounCounty"] satisfies FieldPath<ServiceRequestFormValues>[],
+    copy: "Enter your service address.",
+    fields: ["street", "city", "state", "zip"] satisfies FieldPath<ServiceRequestFormValues>[],
   },
   {
     title: "Service Fit",
     copy: "Choose the service and yard details.",
-    fields: ["serviceType", "dogs", "yardSize"] satisfies FieldPath<ServiceRequestFormValues>[],
+    fields: [
+      "oneTimeClean",
+      "serviceType",
+      "dogs",
+      "yardSize",
+      "propertyArea",
+      "propertyAreaDetail",
+    ] satisfies FieldPath<ServiceRequestFormValues>[],
   },
   {
     title: "Notes",
@@ -98,47 +131,76 @@ export function CustomerQualificationPage({
     formState: { errors, isSubmitting },
   } = useForm<ServiceRequestFormValues>({
     resolver: zodResolver(serviceRequestSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      phone: "",
-      address: "",
-      serviceType: undefined,
-      dogs: undefined,
-      yardSize: undefined,
-      addonServiceIds: [],
-      loudounCounty: false,
-      accessNotes: "",
-      message: "",
-      website: "",
-    },
+    defaultValues: emptyForm,
     mode: "onTouched",
   });
+  const oneTimeClean = useWatch({ control, name: "oneTimeClean" }) ?? false;
   const serviceType = useWatch({ control, name: "serviceType" });
   const dogs = useWatch({ control, name: "dogs" });
   const yardSize = useWatch({ control, name: "yardSize" });
+  const propertyArea = useWatch({ control, name: "propertyArea" });
   const addonServiceIds = useWatch({ control, name: "addonServiceIds" }) ?? [];
   const activeAddonServices = settings.addonServices.filter((addon) => addon.isActive);
   const selectedAddonTotalCents = activeAddonServices
     .filter((addon) => addonServiceIds.includes(addon.id))
     .reduce((total, addon) => total + addon.price, 0);
-  const selectedServiceFrequency = settings.serviceFrequencies.find(
+
+  const oneTimeFrequency = settings.serviceFrequencies.find(
+    (frequency) => frequency.serviceType === "ONE_TIME",
+  );
+  const recurringFrequencies = settings.serviceFrequencies.filter(
+    (frequency) => frequency.serviceType !== "ONE_TIME",
+  );
+  const initialCleanCents = oneTimeFrequency?.basePriceCents ?? 0;
+  const selectedRecurring = recurringFrequencies.find(
     (frequency) => frequency.id === serviceType,
   );
-  const selectedYardSize = settings.yardSizeOptions.find(
-    (option) => option.id === yardSize,
-  );
+  const yardUnknown = yardSize === YARD_SIZE_UNKNOWN;
+  const selectedYardSize = yardUnknown
+    ? undefined
+    : settings.yardSizeOptions.find((option) => option.id === yardSize);
   const selectedDogCount = dogs === "5+" ? 5 : Number(dogs || 0);
+
+  // The base service price(s) with no yard, dog, or add-on fees applied.
+  const serviceBaseCents = oneTimeClean
+    ? oneTimeFrequency
+      ? initialCleanCents
+      : null
+    : selectedRecurring
+      ? initialCleanCents + selectedRecurring.basePriceCents
+      : null;
+
+  // Line items shown in the quote: the initial clean fee and (for recurring) the
+  // selected recurring service price, or just the one-time reset fee.
+  const quoteLines: Array<{ label: string; cents: number }> =
+    serviceBaseCents === null
+      ? []
+      : oneTimeClean
+        ? [{ label: "One-Time Reset Fee", cents: initialCleanCents }]
+        : selectedRecurring
+          ? [
+              { label: "Initial Clean Fee", cents: initialCleanCents },
+              {
+                label: selectedRecurring.name,
+                cents: selectedRecurring.basePriceCents,
+              },
+            ]
+          : [];
+
   const calculatedTotalCents =
-    selectedServiceFrequency && selectedYardSize && selectedDogCount > 0
+    serviceBaseCents !== null && selectedYardSize && selectedDogCount > 0
       ? calculatePriceCents({
-          basePriceCents: selectedServiceFrequency.basePriceCents,
+          basePriceCents: serviceBaseCents,
           yardExtraFeeCents: selectedYardSize.extraFeeCents,
           numberOfDogs: selectedDogCount,
           addonTotalCents: selectedAddonTotalCents,
           extraDogCents: settings.extraDogCents,
         })
       : null;
+
+  // When the yard size is unknown we show the base price only (no final total).
+  const showBasePriceOnly =
+    serviceBaseCents !== null && yardUnknown;
 
   const nextStep = async () => {
     const isValid = await trigger(steps[activeStep].fields, { shouldFocus: true });
@@ -183,20 +245,7 @@ export function CustomerQualificationPage({
     setSubmitted(true);
     setActiveStep(0);
     setFormStartedAt(nextFormStartedAt);
-    reset({
-      fullName: "",
-      email: "",
-      phone: "",
-      address: "",
-      serviceType: undefined,
-      dogs: undefined,
-      yardSize: undefined,
-      addonServiceIds: [],
-      loudounCounty: false,
-      accessNotes: "",
-      message: "",
-      website: "",
-    });
+    reset(emptyForm);
   };
 
   return (
@@ -334,20 +383,7 @@ export function CustomerQualificationPage({
                     variant="outline"
                     onClick={() => {
                       const nextFormStartedAt = getTimestamp();
-                      reset({
-                        fullName: "",
-                        email: "",
-                        phone: "",
-                        address: "",
-                        serviceType: undefined,
-                        dogs: undefined,
-                        yardSize: undefined,
-                        addonServiceIds: [],
-                        loudounCounty: false,
-                        accessNotes: "",
-                        message: "",
-                        website: "",
-                      });
+                      reset(emptyForm);
                       setFormStartedAt(nextFormStartedAt);
                       setSubmitError("");
                       setSubmitMessage("");
@@ -421,49 +457,89 @@ export function CustomerQualificationPage({
                 ) : null}
 
                 {activeStep === 1 ? (
-                  <div className="grid gap-5">
-                    <label className="grid gap-2">
-                      <span className="text-sm font-extrabold text-[#12321C]">Property Address</span>
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <label className="grid gap-2 md:col-span-2">
+                      <span className="text-sm font-extrabold text-[#12321C]">Street Address</span>
                       <Input
-                        {...register("address")}
-                        autoComplete="street-address"
-                        placeholder="Street address, city, ZIP code"
+                        {...register("street")}
+                        autoComplete="address-line1"
+                        placeholder="123 Main St"
                       />
-                      <FieldError message={errors.address?.message} />
+                      <FieldError message={errors.street?.message} />
                     </label>
-                    <label className="flex items-start gap-3 rounded-[1.5rem] border border-[#0F5A24]/10 bg-[#F7F9F4] p-4">
-                      <input
-                        type="checkbox"
-                        className="mt-1 size-5 rounded border-[#0F5A24]/24 accent-[#65C22E]"
-                        {...register("loudounCounty")}
+                    <label className="grid gap-2">
+                      <span className="text-sm font-extrabold text-[#12321C]">City</span>
+                      <Input
+                        {...register("city")}
+                        autoComplete="address-level2"
+                        placeholder="City"
                       />
-                      <span>
-                        <span className="block text-sm font-extrabold text-[#12321C]">
-                          I confirm this property is located in {settings.serviceArea}.
-                        </span>
-                        <FieldError message={errors.loudounCounty?.message} />
-                      </span>
+                      <FieldError message={errors.city?.message} />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-extrabold text-[#12321C]">State</span>
+                      <Input
+                        {...register("state")}
+                        autoComplete="address-level1"
+                        placeholder="State"
+                      />
+                      <FieldError message={errors.state?.message} />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-extrabold text-[#12321C]">Zip Code</span>
+                      <Input
+                        {...register("zip")}
+                        autoComplete="postal-code"
+                        placeholder="ZIP code"
+                      />
+                      <FieldError message={errors.zip?.message} />
                     </label>
                   </div>
                 ) : null}
 
                 {activeStep === 2 ? (
                   <div className="grid gap-5 md:grid-cols-3">
-                    <label className="grid gap-2">
-                      <span className="text-sm font-extrabold text-[#12321C]">Service Type</span>
-                      <SelectWrap>
-                        <Select {...register("serviceType")} defaultValue="">
-                          <option value="" disabled>Choose service</option>
-                          {settings.serviceFrequencies.map((frequency) => (
-                            <option key={frequency.id} value={frequency.id}>
-                              {frequency.name}{" "}
-                              {formatCurrency(frequency.basePriceCents)}
-                            </option>
-                          ))}
-                        </Select>
-                      </SelectWrap>
-                      <FieldError message={errors.serviceType?.message} />
+                    <label className="flex items-start gap-3 rounded-[1.5rem] border border-[#0F5A24]/10 bg-[#F7F9F4] p-4 md:col-span-3">
+                      <input
+                        type="checkbox"
+                        className="mt-1 size-5 rounded border-[#0F5A24]/24 accent-[#65C22E]"
+                        {...register("oneTimeClean")}
+                      />
+                      <span className="block text-sm font-extrabold leading-6 text-[#12321C]">
+                        I don&apos;t want recurring visits, I just want a one-time clean.
+                      </span>
                     </label>
+                    {oneTimeClean ? (
+                      <div className="grid gap-2 md:col-span-1">
+                        <span className="text-sm font-extrabold text-[#12321C]">Service</span>
+                        <div className="flex h-12 items-center rounded-[1rem] border border-[#0F5A24]/12 bg-[#F7F9F4] px-4 text-sm font-extrabold text-[#0F5A24]">
+                          One-Time Clean{" "}
+                          {formatCurrency(initialCleanCents)}
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="grid gap-2">
+                        <span className="text-sm font-extrabold text-[#12321C]">
+                          Recurring Service
+                        </span>
+                        <SelectWrap>
+                          <Select {...register("serviceType")} defaultValue="">
+                            <option value="" disabled>Choose service</option>
+                            {recurringFrequencies.map((frequency) => (
+                              <option key={frequency.id} value={frequency.id}>
+                                {frequency.name}{" "}
+                                {formatCurrency(frequency.basePriceCents)}
+                              </option>
+                            ))}
+                          </Select>
+                        </SelectWrap>
+                        <p className="text-xs font-semibold leading-5 text-[#405244]/72">
+                          Includes a one-time initial clean fee of{" "}
+                          {formatCurrency(initialCleanCents)} plus your recurring price.
+                        </p>
+                        <FieldError message={errors.serviceType?.message} />
+                      </label>
+                    )}
                     <label className="grid gap-2">
                       <span className="text-sm font-extrabold text-[#12321C]">Number of Dogs</span>
                       <SelectWrap>
@@ -482,20 +558,66 @@ export function CustomerQualificationPage({
                       </p>
                       <FieldError message={errors.dogs?.message} />
                     </label>
-                    <label className="grid gap-2">
-                      <span className="text-sm font-extrabold text-[#12321C]">Yard Size</span>
-                      <SelectWrap>
-                        <Select {...register("yardSize")} defaultValue="">
-                          <option value="" disabled>Choose yard size</option>
-                          {settings.yardSizeOptions.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.name} +{formatCurrency(option.extraFeeCents)}
+                    <div className="grid gap-2">
+                      <label className="grid gap-2">
+                        <span className="text-sm font-extrabold text-[#12321C]">Yard Size</span>
+                        <SelectWrap>
+                          <Select {...register("yardSize")} defaultValue="">
+                            <option value="" disabled>Choose yard size</option>
+                            {settings.yardSizeOptions.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name} +{formatCurrency(option.extraFeeCents)}
+                              </option>
+                            ))}
+                            <option value={YARD_SIZE_UNKNOWN}>
+                              I don&apos;t know / Unsure
                             </option>
-                          ))}
-                        </Select>
-                      </SelectWrap>
-                      <FieldError message={errors.yardSize?.message} />
-                    </label>
+                          </Select>
+                        </SelectWrap>
+                        <FieldError message={errors.yardSize?.message} />
+                      </label>
+                      <p className="text-xs font-semibold leading-5 text-[#405244]/72">
+                        Don&apos;t worry if you aren&apos;t sure—we verify your yard size
+                        using satellite mapping. This is just to provide your instant
+                        quote.
+                      </p>
+                    </div>
+                    <fieldset className="grid gap-3 rounded-[1.5rem] border border-[#0F5A24]/10 bg-[#F7F9F4] p-4 md:col-span-3">
+                      <legend className="px-1 text-sm font-extrabold text-[#12321C]">
+                        Which parts of the property need to be cleaned?
+                      </legend>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {propertyAreaValues.map((area) => (
+                          <label
+                            key={area}
+                            className="flex items-start gap-3 rounded-2xl bg-white px-4 py-3"
+                          >
+                            <input
+                              type="radio"
+                              value={area}
+                              className="mt-1 size-5 border-[#0F5A24]/24 accent-[#65C22E]"
+                              {...register("propertyArea")}
+                            />
+                            <span className="text-sm font-extrabold leading-6 text-[#12321C]">
+                              {propertyAreaLabels[area]}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {propertyArea === "SPECIFIC_AREA" ? (
+                        <label className="grid gap-2">
+                          <span className="text-sm font-extrabold text-[#12321C]">
+                            Describe the area or dog run
+                          </span>
+                          <Textarea
+                            {...register("propertyAreaDetail")}
+                            placeholder="Tell us which specific area or dog run needs cleaning."
+                          />
+                          <FieldError message={errors.propertyAreaDetail?.message} />
+                        </label>
+                      ) : null}
+                      <FieldError message={errors.propertyArea?.message} />
+                    </fieldset>
                     {activeAddonServices.length > 0 ? (
                       <div className="grid gap-3 rounded-[1.5rem] border border-[#0F5A24]/10 bg-[#F7F9F4] p-4 md:col-span-3">
                         <p className="text-sm font-extrabold text-[#12321C]">
@@ -521,14 +643,48 @@ export function CustomerQualificationPage({
                         </div>
                       </div>
                     ) : null}
-                    {calculatedTotalCents !== null ? (
+                    {showBasePriceOnly ? (
                       <div className="rounded-[1.5rem] border border-[#65C22E]/28 bg-[#E8F7DF] p-4 md:col-span-3">
                         <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#0F5A24]/70">
-                          Estimated Total
+                          Base Price
                         </p>
-                        <p className="mt-2 font-heading text-3xl font-extrabold text-[#0F5A24]">
-                          {formatCurrency(calculatedTotalCents)}
+                        <div className="mt-3 grid gap-2">
+                          {quoteLines.map((line) => (
+                            <div
+                              key={line.label}
+                              className="flex items-center justify-between text-sm font-extrabold text-[#0F5A24]"
+                            >
+                              <span>{line.label}</span>
+                              <span>{formatCurrency(line.cents)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mt-4 text-sm font-semibold leading-6 text-[#0F5A24]/80">
+                          Base price shown. Your final customized quote will be sent to you
+                          for approval once we verify your yard size.
                         </p>
+                      </div>
+                    ) : calculatedTotalCents !== null ? (
+                      <div className="rounded-[1.5rem] border border-[#65C22E]/28 bg-[#E8F7DF] p-4 md:col-span-3">
+                        <div className="grid gap-2">
+                          {quoteLines.map((line) => (
+                            <div
+                              key={line.label}
+                              className="flex items-center justify-between text-sm font-extrabold text-[#0F5A24]"
+                            >
+                              <span>{line.label}</span>
+                              <span>{formatCurrency(line.cents)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 border-t border-[#0F5A24]/12 pt-3">
+                          <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#0F5A24]/70">
+                            Estimated Total
+                          </p>
+                          <p className="mt-2 font-heading text-3xl font-extrabold text-[#0F5A24]">
+                            {formatCurrency(calculatedTotalCents)}
+                          </p>
+                        </div>
                       </div>
                     ) : null}
                   </div>

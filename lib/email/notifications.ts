@@ -6,7 +6,6 @@ import type {
   ContactFormValues,
   ServiceRequestFormValues,
 } from "@/lib/forms";
-import { defaultBusinessSettings } from "@/lib/settings/pricing";
 
 type SelectedAddonSnapshot = {
   id: string;
@@ -79,20 +78,6 @@ function formatCurrencyForEmail(cents: number) {
     currency: "USD",
     maximumFractionDigits: Number.isInteger(dollars) ? 0 : 2,
   }).format(dollars);
-}
-
-function serviceTypeLabel(serviceType: ServiceRequestFormValues["serviceType"]) {
-  return (
-    defaultBusinessSettings.serviceFrequencies.find((item) => item.id === serviceType)
-      ?.name ?? serviceType
-  );
-}
-
-function yardSizeLabel(yardSize: ServiceRequestFormValues["yardSize"]) {
-  return (
-    defaultBusinessSettings.yardSizeOptions.find((item) => item.id === yardSize)
-      ?.name ?? yardSize
-  );
 }
 
 function renderDetailRows(rows: Array<[string, string]>) {
@@ -233,27 +218,65 @@ export async function sendLeadNotificationEmail({
   lead,
   submittedAt,
   serviceLabel,
+  propertyAddress,
+  isOneTimeClean,
+  initialCleanCents,
+  recurringLabel,
+  recurringCents,
+  numberOfDogs,
   yardSizeLabel: selectedYardSizeLabel,
+  yardSizeUnknown,
+  propertyAreaLabel,
+  propertyAreaDetail,
   selectedAddons = [],
   calculatedTotalCents,
 }: {
   lead: ServiceRequestFormValues;
   submittedAt: Date;
-  serviceLabel?: string;
-  yardSizeLabel?: string;
+  serviceLabel: string;
+  propertyAddress: string;
+  isOneTimeClean: boolean;
+  initialCleanCents: number;
+  recurringLabel?: string | null;
+  recurringCents?: number | null;
+  numberOfDogs: number;
+  yardSizeLabel: string;
+  yardSizeUnknown: boolean;
+  propertyAreaLabel: string;
+  propertyAreaDetail?: string | null;
   selectedAddons?: SelectedAddonSnapshot[];
-  calculatedTotalCents?: number;
+  calculatedTotalCents?: number | null;
 }) {
+  const pricingRows: Array<[string, string]> = isOneTimeClean
+    ? [["One-time reset fee", formatCurrencyForEmail(initialCleanCents)]]
+    : [
+        ["Initial clean fee", formatCurrencyForEmail(initialCleanCents)],
+        ...(typeof recurringCents === "number"
+          ? ([
+              [
+                `Recurring price${recurringLabel ? ` (${recurringLabel})` : ""}`,
+                formatCurrencyForEmail(recurringCents),
+              ],
+            ] as Array<[string, string]>)
+          : []),
+      ];
+
   await sendNotificationEmail({
     subject: "New Service Request Received",
     rows: [
       ["Full name", lead.fullName],
       ["Email", lead.email],
       ["Phone", lead.phone],
-      ["Property address", lead.address],
-      ["Service type", serviceLabel ?? serviceTypeLabel(lead.serviceType)],
-      ["Number of dogs", lead.dogs],
-      ["Yard size", selectedYardSizeLabel ?? yardSizeLabel(lead.yardSize)],
+      ["Property address", propertyAddress],
+      ["Service model", isOneTimeClean ? "One-time clean" : "Recurring service"],
+      ["Service type", serviceLabel],
+      ...pricingRows,
+      ["Number of dogs", String(numberOfDogs)],
+      ["Yard size", selectedYardSizeLabel],
+      ["Areas to clean", propertyAreaLabel],
+      ...(propertyAreaDetail
+        ? ([["Area detail", propertyAreaDetail]] as Array<[string, string]>)
+        : []),
       [
         "Selected add-ons",
         selectedAddons.length > 0
@@ -262,65 +285,18 @@ export async function sendLeadNotificationEmail({
               .join("\n")
           : "None",
       ],
-      ...(typeof calculatedTotalCents === "number"
-        ? ([["Calculated total", formatCurrencyForEmail(calculatedTotalCents)]] as Array<
-            [string, string]
-          >)
-        : []),
       [
-        "Loudoun County confirmation",
-        lead.loudounCounty ? "Confirmed" : "Not confirmed",
+        typeof calculatedTotalCents === "number"
+          ? "Calculated total"
+          : "Quote status",
+        typeof calculatedTotalCents === "number"
+          ? formatCurrencyForEmail(calculatedTotalCents)
+          : yardSizeUnknown
+            ? "Pending — yard size to be verified"
+            : "Not calculated",
       ],
       ["Access notes", formatOptional(lead.accessNotes)],
       ["Message", formatOptional(lead.message)],
-      ["Submitted date", formatSubmittedDate(submittedAt)],
-    ],
-  });
-}
-
-export async function sendLeadReceivedCustomerEmail({
-  lead,
-  submittedAt,
-  serviceLabel,
-  yardSizeLabel: selectedYardSizeLabel,
-  selectedAddons = [],
-  calculatedTotalCents,
-}: {
-  lead: ServiceRequestFormValues;
-  submittedAt: Date;
-  serviceLabel?: string;
-  yardSizeLabel?: string;
-  selectedAddons?: SelectedAddonSnapshot[];
-  calculatedTotalCents?: number;
-}) {
-  await sendNotificationEmail({
-    to: lead.email,
-    subject: "We Received Your Dog Poop People Service Request",
-    intro:
-      "Thanks for reaching out. We received your service request and will review it soon.",
-    nextStep:
-      "we will contact you after reviewing your property and service details.",
-    rows: [
-      ["Full name", lead.fullName],
-      ["Email", lead.email],
-      ["Phone", lead.phone],
-      ["Property address", lead.address],
-      ["Service type", serviceLabel ?? serviceTypeLabel(lead.serviceType)],
-      ["Number of dogs", lead.dogs],
-      ["Yard size", selectedYardSizeLabel ?? yardSizeLabel(lead.yardSize)],
-      [
-        "Selected add-ons",
-        selectedAddons.length > 0
-          ? selectedAddons
-              .map((addon) => `${addon.name} (${formatCurrencyForEmail(addon.price)})`)
-              .join("\n")
-          : "None",
-      ],
-      ...(typeof calculatedTotalCents === "number"
-        ? ([["Calculated total", formatCurrencyForEmail(calculatedTotalCents)]] as Array<
-            [string, string]
-          >)
-        : []),
       ["Submitted date", formatSubmittedDate(submittedAt)],
     ],
   });
@@ -345,25 +321,3 @@ export async function sendContactNotificationEmail({
   });
 }
 
-export async function sendContactAutoReplyEmail({
-  message,
-  submittedAt,
-}: {
-  message: ContactFormValues;
-  submittedAt: Date;
-}) {
-  await sendNotificationEmail({
-    to: message.email,
-    subject: "We Received Your Dog Poop People Message",
-    intro:
-      "Thanks for contacting Dog Poop People. We received your message and will reply as soon as possible.",
-    nextStep: "we will review your message and get back to you.",
-    rows: [
-      ["Full name", message.fullName],
-      ["Email", message.email],
-      ["Phone", formatOptional(message.phone)],
-      ["Message", message.message],
-      ["Submitted date", formatSubmittedDate(submittedAt)],
-    ],
-  });
-}

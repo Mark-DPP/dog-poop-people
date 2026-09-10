@@ -17,6 +17,7 @@ import {
   yardSizeLabels,
 } from "@/lib/admin/format";
 import { requireAdminUser } from "@/lib/auth/admin";
+import { propertyAreaLabels, type PropertyArea } from "@/lib/forms";
 import { formatCurrency } from "@/lib/settings/pricing";
 
 export const metadata: Metadata = {
@@ -104,25 +105,46 @@ export default async function Page({ params }: { params: Params }) {
             <DetailItem label="Phone" value={lead.phone} />
             <DetailItem label="Property address" value={lead.propertyAddress} />
             <DetailItem
+              label="Service model"
+              value={lead.isOneTimeClean ? "One-time clean" : "Recurring service"}
+            />
+            <DetailItem
               label="Service type"
               value={lead.serviceFrequency?.name ?? serviceTypeLabels[lead.serviceType]}
             />
             <DetailItem label="Number of dogs" value={String(lead.numberOfDogs)} />
             <DetailItem
               label="Yard size"
-              value={lead.yardSizeOption?.name ?? yardSizeLabels[lead.yardSize]}
+              value={
+                lead.yardSizeUnknown
+                  ? "Unsure — to verify"
+                  : (lead.yardSizeOption?.name ??
+                    (lead.yardSize ? yardSizeLabels[lead.yardSize] : "Not recorded"))
+              }
             />
+            <DetailItem
+              label="Areas to clean"
+              value={
+                lead.propertyArea
+                  ? propertyAreaLabels[lead.propertyArea as PropertyArea]
+                  : "Not provided"
+              }
+            />
+            {lead.propertyAreaDetail ? (
+              <DetailItem
+                label="Area detail"
+                value={lead.propertyAreaDetail}
+              />
+            ) : null}
             <DetailItem
               label="Final total"
               value={
                 typeof lead.calculatedTotalCents === "number"
                   ? formatCurrency(lead.calculatedTotalCents)
-                  : "Not recorded"
+                  : lead.yardSizeUnknown
+                    ? "Pending yard verification"
+                    : "Not recorded"
               }
-            />
-            <DetailItem
-              label="Loudoun County"
-              value={lead.isInLoudounCounty ? "Confirmed" : "Not confirmed"}
             />
             <DetailItem label="Access notes" value={lead.accessNotes || "Not provided"} />
             <DetailItem label="Message" value={lead.message || "Not provided"} />
