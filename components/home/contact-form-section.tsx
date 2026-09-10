@@ -100,7 +100,7 @@ export function ContactFormSection() {
             </div>
             <h3 className="mt-6 font-heading text-2xl font-extrabold">Dog Poop People</h3>
             <p className="mt-3 leading-7 text-white/72">
-              Serving Loudoun County, Virginia
+              Serving 17345 Legacy Terrace, Round Hill, VA 20141
             </p>
             <p className="mt-2 leading-7 text-white/72">
               Simple pricing. Reliable cleanup. No hidden fees.
@@ -123,7 +123,7 @@ export function ContactFormSection() {
               </p>
               <p className="flex items-center gap-3">
                 <MapPinned className="size-4 text-[#65C22E]" />
-                Loudoun County, Virginia
+                17345 Legacy Terrace, Round Hill, VA 20141
               </p>
             </div>
           </div>

@@ -162,7 +162,7 @@ const faqs = [
   {
     question: "What areas do you serve?",
     answer:
-      "Dog Poop People serves Loudoun County, Virginia, with placeholder coverage details ready to refine as routes are finalized.",
+      "Dog Poop People serves 17345 Legacy Terrace, Round Hill, VA 20141, with placeholder coverage details ready to refine as routes are finalized.",
   },
   {
     question: "Do you clean large properties?",
@@ -600,7 +600,7 @@ export function InfoSections() {
             </p>
             <div className="mt-8 inline-flex items-center gap-3 rounded-full bg-white/78 px-5 py-3 font-extrabold text-[#12321C] shadow-[0_16px_44px_rgba(31,46,35,0.08)]">
               <MapPinned className="size-5 text-[#65C22E]" />
-              Loudoun County, Virginia
+              17345 Legacy Terrace, Round Hill, VA 20141
             </div>
           </motion.div>
 

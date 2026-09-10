@@ -35,7 +35,7 @@ export function ContactPage() {
           >
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/22 bg-white/12 px-4 py-2 text-sm font-extrabold text-[#FFF8E6] shadow-[0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-md">
               <MapPinned className="size-4 text-[#65C22E]" />
-              Serving Loudoun County, Virginia
+              Serving 17345 Legacy Terrace, Round Hill, VA 20141
             </div>
             <h1 className="font-heading text-4xl font-extrabold leading-[1.02] tracking-tight sm:text-6xl">
               Contact Dog Poop People

@@ -69,7 +69,7 @@ export function SiteFooter() {
             </p>
             <p className="flex items-center gap-3">
               <MapPinned className="size-4 text-[#65C22E]" />
-              Loudoun County, Virginia
+              17345 Legacy Terrace, Round Hill, VA 20141
             </p>
           </div>
         </div>
