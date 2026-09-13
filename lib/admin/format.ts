@@ -21,7 +21,7 @@ export const contactMessageStatusLabels = {
 } satisfies Record<ContactMessageStatus, string>;
 
 export const serviceTypeLabels = {
-  ONE_TIME: "One Time Service",
+  ONE_TIME: "One-Time Clean",
   WEEKLY: "Weekly Service",
   BI_WEEKLY: "Bi-Weekly Service",
   MONTHLY: "Monthly Service",

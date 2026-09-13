@@ -36,7 +36,7 @@ export const defaultBusinessSettings: BusinessSettingsValues = {
   serviceFrequencies: [
     {
       id: "first-visit",
-      name: "First Visit",
+      name: "One-Time Clean",
       basePriceCents: 9000,
       serviceType: "ONE_TIME",
       sortOrder: 1,

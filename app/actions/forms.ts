@@ -124,8 +124,7 @@ export async function submitLeadForm(
         throw new Error("Service pricing is not configured. Please try again later.");
       }
 
-      // Recurring is the default flow; the one-time checkbox uses the initial
-      // clean (reset) fee only.
+      // Recurring and one-time clean are separate service options.
       const recurringFrequency = lead.oneTimeClean
         ? null
         : await tx.serviceFrequency.findUnique({
@@ -172,12 +171,9 @@ export async function submitLeadForm(
         0,
       );
 
-      // Recurring quotes bundle the initial clean fee with the recurring price;
-      // one-time quotes use only the reset fee.
       const serviceBaseCents = lead.oneTimeClean
         ? oneTimeFrequency.basePriceCents
-        : oneTimeFrequency.basePriceCents +
-          (recurringFrequency?.basePriceCents ?? 0);
+        : (recurringFrequency?.basePriceCents ?? 0);
 
       // No final total is calculated when the yard size is unknown.
       const calculatedTotalCents =
@@ -250,7 +246,7 @@ export async function submitLeadForm(
         propertyAddress,
         propertyArea,
         isOneTimeClean: lead.oneTimeClean,
-        initialCleanCents: oneTimeFrequency.basePriceCents,
+        oneTimeCleanCents: oneTimeFrequency.basePriceCents,
         recurringLabel: recurringFrequency?.name ?? null,
         recurringCents: recurringFrequency?.basePriceCents ?? null,
         numberOfDogs,
@@ -269,7 +265,7 @@ export async function submitLeadForm(
       serviceLabel: createdLead.serviceLabel,
       propertyAddress: createdLead.propertyAddress,
       isOneTimeClean: createdLead.isOneTimeClean,
-      initialCleanCents: createdLead.initialCleanCents,
+      oneTimeCleanCents: createdLead.oneTimeCleanCents,
       recurringLabel: createdLead.recurringLabel,
       recurringCents: createdLead.recurringCents,
       numberOfDogs: createdLead.numberOfDogs,
