@@ -668,7 +668,7 @@ export function CustomerQualificationPage({
                               className="flex items-center justify-between text-sm font-extrabold text-[#0F5A24]"
                             >
                               <span>{line.label}</span>
-                              <span>{formatCurrency(line.cents)}</span>
+                              <span>{formatCurrency(calculatedTotalCents)}</span>
                             </div>
                           ))}
                         </div>
