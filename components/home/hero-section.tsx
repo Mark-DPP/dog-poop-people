@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 
 const pricing = [
   {
-    title: "First Visit",
+    title: "One-Time Clean",
     price: "$90",
     note: "A one-time cleanup for a fresh reset.",
     accent: "#F5B84B",

@@ -220,7 +220,7 @@ export async function sendLeadNotificationEmail({
   serviceLabel,
   propertyAddress,
   isOneTimeClean,
-  initialCleanCents,
+  oneTimeCleanCents,
   recurringLabel,
   recurringCents,
   numberOfDogs,
@@ -236,7 +236,7 @@ export async function sendLeadNotificationEmail({
   serviceLabel: string;
   propertyAddress: string;
   isOneTimeClean: boolean;
-  initialCleanCents: number;
+  oneTimeCleanCents: number;
   recurringLabel?: string | null;
   recurringCents?: number | null;
   numberOfDogs: number;
@@ -248,18 +248,15 @@ export async function sendLeadNotificationEmail({
   calculatedTotalCents?: number | null;
 }) {
   const pricingRows: Array<[string, string]> = isOneTimeClean
-    ? [["One-time reset fee", formatCurrencyForEmail(initialCleanCents)]]
-    : [
-        ["Initial clean fee", formatCurrencyForEmail(initialCleanCents)],
-        ...(typeof recurringCents === "number"
-          ? ([
-              [
-                `Recurring price${recurringLabel ? ` (${recurringLabel})` : ""}`,
-                formatCurrencyForEmail(recurringCents),
-              ],
-            ] as Array<[string, string]>)
-          : []),
-      ];
+    ? [["One-Time Clean", formatCurrencyForEmail(oneTimeCleanCents)]]
+    : typeof recurringCents === "number"
+      ? [
+          [
+            `Recurring price${recurringLabel ? ` (${recurringLabel})` : ""}`,
+            formatCurrencyForEmail(recurringCents),
+          ],
+        ]
+      : [];
 
   await sendNotificationEmail({
     subject: "New Service Request Received",
@@ -320,4 +317,3 @@ export async function sendContactNotificationEmail({
     ],
   });
 }
-

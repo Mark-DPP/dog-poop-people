@@ -80,11 +80,11 @@ const features: Array<{
 
 const pricingPlans = [
   {
-    title: "First Visit",
+    title: "One-Time Clean",
     price: "$90",
     note: "A thorough first cleanup for yards that need a fresh start.",
     items: [
-      "One-time initial cleanup",
+      "One-time cleanup",
       "Complete yard service",
       "Safe waste removal",
       "Base price before adjustments",
@@ -139,7 +139,7 @@ const steps = [
   {
     icon: CalendarCheck2,
     title: "Pick your schedule",
-    copy: "Book a one-time reset or keep things fresh with weekly service.",
+    copy: "Book a one-time clean or choose a recurring service.",
   },
   {
     icon: Sparkles,

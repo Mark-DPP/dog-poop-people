@@ -151,7 +151,7 @@ export function CustomerQualificationPage({
   const recurringFrequencies = settings.serviceFrequencies.filter(
     (frequency) => frequency.serviceType !== "ONE_TIME",
   );
-  const initialCleanCents = oneTimeFrequency?.basePriceCents ?? 0;
+  const oneTimeCleanCents = oneTimeFrequency?.basePriceCents ?? 0;
   const selectedRecurring = recurringFrequencies.find(
     (frequency) => frequency.id === serviceType,
   );
@@ -161,25 +161,24 @@ export function CustomerQualificationPage({
     : settings.yardSizeOptions.find((option) => option.id === yardSize);
   const selectedDogCount = dogs === "5+" ? 5 : Number(dogs || 0);
 
-  // The base service price(s) with no yard, dog, or add-on fees applied.
+  // The selected service price with no yard, dog, or add-on fees applied.
   const serviceBaseCents = oneTimeClean
     ? oneTimeFrequency
-      ? initialCleanCents
+      ? oneTimeCleanCents
       : null
     : selectedRecurring
-      ? initialCleanCents + selectedRecurring.basePriceCents
+      ? selectedRecurring.basePriceCents
       : null;
 
-  // Line items shown in the quote: the initial clean fee and (for recurring) the
-  // selected recurring service price, or just the one-time reset fee.
+  // One-time and recurring services are separate offerings, so only the selected
+  // service appears in the quote summary.
   const quoteLines: Array<{ label: string; cents: number }> =
     serviceBaseCents === null
       ? []
       : oneTimeClean
-        ? [{ label: "One-Time Reset Fee", cents: initialCleanCents }]
+        ? [{ label: "One-Time Clean", cents: oneTimeCleanCents }]
         : selectedRecurring
           ? [
-              { label: "Initial Clean Fee", cents: initialCleanCents },
               {
                 label: selectedRecurring.name,
                 cents: selectedRecurring.basePriceCents,
@@ -514,7 +513,7 @@ export function CustomerQualificationPage({
                         <span className="text-sm font-extrabold text-[#12321C]">Service</span>
                         <div className="flex h-12 items-center rounded-[1rem] border border-[#0F5A24]/12 bg-[#F7F9F4] px-4 text-sm font-extrabold text-[#0F5A24]">
                           One-Time Clean{" "}
-                          {formatCurrency(initialCleanCents)}
+                          {formatCurrency(oneTimeCleanCents)}
                         </div>
                       </div>
                     ) : (
@@ -533,10 +532,6 @@ export function CustomerQualificationPage({
                             ))}
                           </Select>
                         </SelectWrap>
-                        <p className="text-xs font-semibold leading-5 text-[#405244]/72">
-                          Includes a one-time initial clean fee of{" "}
-                          {formatCurrency(initialCleanCents)} plus your recurring price.
-                        </p>
                         <FieldError message={errors.serviceType?.message} />
                       </label>
                     )}
