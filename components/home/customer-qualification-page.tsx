@@ -677,14 +677,6 @@ export function CustomerQualificationPage({
                             </div>
                           ))}
                         </div>
-                        <div className="mt-3 border-t border-[#0F5A24]/12 pt-3">
-                          <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[#0F5A24]/70">
-                            Estimated Total
-                          </p>
-                          <p className="mt-2 font-heading text-3xl font-extrabold text-[#0F5A24]">
-                            {formatCurrency(calculatedTotalCents)}
-                          </p>
-                        </div>
                       </div>
                     ) : null}
                   </div>
