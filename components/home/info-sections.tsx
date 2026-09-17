@@ -33,6 +33,11 @@ import {
 } from "@/components/home/brand-svg";
 import { SiteFooter } from "@/components/home/site-footer";
 import { Button } from "@/components/ui/button";
+import {
+  formatCurrency,
+  getServiceBasePriceCents,
+  type ServiceFrequencyConfig,
+} from "@/lib/settings/pricing";
 
 const reveal: Variants = {
   hidden: { opacity: 0, y: 28 },
@@ -81,7 +86,7 @@ const features: Array<{
 const pricingPlans = [
   {
     title: "One-Time Clean",
-    price: "$30",
+    serviceType: "ONE_TIME",
     note: "A thorough first cleanup for yards that need a fresh start.",
     items: [
       "One-time cleanup",
@@ -92,7 +97,7 @@ const pricingPlans = [
   },
   {
     title: "Weekly Service",
-    price: "$15",
+    serviceType: "WEEKLY",
     note: "The lowest base price for consistently clean yards.",
     badge: "Most Popular",
     featured: true,
@@ -106,7 +111,7 @@ const pricingPlans = [
   },
   {
     title: "Bi-Weekly Service",
-    price: "$25",
+    serviceType: "BI_WEEKLY",
     note: "A balanced base price for service every other week.",
     suffix: "per visit",
     items: [
@@ -118,7 +123,7 @@ const pricingPlans = [
   },
   {
     title: "Monthly Service",
-    price: "$50",
+    serviceType: "MONTHLY",
     note: "A simple base price for a monthly yard refresh.",
     suffix: "per visit",
     items: [
@@ -286,7 +291,11 @@ function TestimonialsSection() {
   );
 }
 
-export function InfoSections() {
+export function InfoSections({
+  serviceFrequencies,
+}: {
+  serviceFrequencies: ServiceFrequencyConfig[];
+}) {
   return (
     <>
       <section className="relative overflow-hidden bg-[#FAF2DE] px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
@@ -447,7 +456,9 @@ export function InfoSections() {
                     Starting at
                   </p>
                   <p className="font-heading text-6xl font-extrabold tracking-tight">
-                    {plan.price}
+                    {formatCurrency(
+                      getServiceBasePriceCents(serviceFrequencies, plan.serviceType),
+                    )}
                   </p>
                   {plan.suffix ? (
                     <p className={`mt-2 text-sm font-bold ${plan.featured ? "text-white/70" : "text-[#405244]"}`}>

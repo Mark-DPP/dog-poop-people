@@ -96,6 +96,20 @@ export function calculatePriceCents({
   );
 }
 
+export function getServiceBasePriceCents(
+  serviceFrequencies: ServiceFrequencyConfig[],
+  serviceType: string,
+) {
+  const configuredPrice = serviceFrequencies.find(
+    (frequency) => frequency.serviceType === serviceType,
+  )?.basePriceCents;
+  const fallbackPrice = defaultBusinessSettings.serviceFrequencies.find(
+    (frequency) => frequency.serviceType === serviceType,
+  )?.basePriceCents;
+
+  return configuredPrice ?? fallbackPrice ?? 0;
+}
+
 export function formatCurrency(cents: number) {
   const dollars = cents / 100;
 

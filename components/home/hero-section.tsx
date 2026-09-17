@@ -7,31 +7,36 @@ import Link from "next/link";
 
 import { HeroFieldLines, PriceLeafSvg } from "@/components/home/brand-svg";
 import { Button } from "@/components/ui/button";
+import {
+  formatCurrency,
+  getServiceBasePriceCents,
+  type ServiceFrequencyConfig,
+} from "@/lib/settings/pricing";
 
 const pricing = [
   {
     title: "One-Time Clean",
-    price: "$30",
+    serviceType: "ONE_TIME",
     note: "A one-time cleanup for a fresh reset.",
     accent: "#F5B84B",
   },
   {
     title: "Weekly Service",
-    price: "$15",
+    serviceType: "WEEKLY",
     suffix: "/ Visit",
     note: "Reliable cleanup on repeat.",
     accent: "#65C22E",
   },
   {
     title: "Bi-Weekly Service",
-    price: "$25",
+    serviceType: "BI_WEEKLY",
     suffix: "/ Visit",
     note: "A flexible every-other-week schedule.",
     accent: "#9ED4FF",
   },
   {
     title: "Monthly Service",
-    price: "$50",
+    serviceType: "MONTHLY",
     suffix: "/ Visit",
     note: "A monthly refresh for lighter needs.",
     accent: "#F5B84B",
@@ -43,7 +48,11 @@ const fadeUp = {
   visible: { y: 0, opacity: 1 },
 };
 
-export function HeroSection() {
+export function HeroSection({
+  serviceFrequencies,
+}: {
+  serviceFrequencies: ServiceFrequencyConfig[];
+}) {
   return (
     <section
       id="home"
@@ -158,7 +167,9 @@ export function HeroSection() {
               </p>
               <div className="mt-1 flex items-end justify-between gap-4">
                 <p className="font-heading text-4xl font-extrabold tracking-tight sm:text-5xl">
-                  {item.price}
+                  {formatCurrency(
+                    getServiceBasePriceCents(serviceFrequencies, item.serviceType),
+                  )}
                 </p>
                 {item.suffix ? (
                   <span className="rounded-full bg-[#65C22E]/18 px-3 py-1 text-xs font-extrabold text-[#0F5A24]">
