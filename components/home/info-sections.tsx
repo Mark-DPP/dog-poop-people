@@ -81,7 +81,7 @@ const features: Array<{
 const pricingPlans = [
   {
     title: "One-Time Clean",
-    price: "$90",
+    price: "$30",
     note: "A thorough first cleanup for yards that need a fresh start.",
     items: [
       "One-time cleanup",

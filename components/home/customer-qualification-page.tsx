@@ -94,6 +94,12 @@ const steps = [
   },
 ];
 
+const customerYardSizeTiers = [
+  { slot: 1, label: "Small: < 1/4 acre" },
+  { slot: 3, label: "Medium: 1/4 – 1/2 acre" },
+  { slot: 5, label: "Large: > 1/2 acre" },
+] as const;
+
 function FieldError({ message }: { message?: string }) {
   if (!message) {
     return null;
@@ -155,10 +161,19 @@ export function CustomerQualificationPage({
   const selectedRecurring = recurringFrequencies.find(
     (frequency) => frequency.id === serviceType,
   );
+  const customerYardSizeOptions = customerYardSizeTiers.flatMap((tier) => {
+    const pricingOption = settings.yardSizeOptions.find(
+      (option) => option.slot === tier.slot,
+    );
+
+    return pricingOption
+      ? [{ ...pricingOption, name: tier.label }]
+      : [];
+  });
   const yardUnknown = yardSize === YARD_SIZE_UNKNOWN;
   const selectedYardSize = yardUnknown
     ? undefined
-    : settings.yardSizeOptions.find((option) => option.id === yardSize);
+    : customerYardSizeOptions.find((option) => option.id === yardSize);
   const selectedDogCount = dogs === "5+" ? 5 : Number(dogs || 0);
 
   // The selected service price with no yard, dog, or add-on fees applied.
@@ -559,7 +574,7 @@ export function CustomerQualificationPage({
                         <SelectWrap>
                           <Select {...register("yardSize")} defaultValue="">
                             <option value="" disabled>Choose yard size</option>
-                            {settings.yardSizeOptions.map((option) => (
+                            {customerYardSizeOptions.map((option) => (
                               <option key={option.id} value={option.id}>
                                 {option.name} +{formatCurrency(option.extraFeeCents)}
                               </option>
